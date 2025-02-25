@@ -47,7 +47,6 @@ typedef struct {
 
 counter_conf_t counter_conf;
 
-
 typedef struct {
     uint8_t fsm_ticks_count;
     uint16_t pulsos;

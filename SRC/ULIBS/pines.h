@@ -35,41 +35,38 @@ extern "C" {
     #define EN_SENS12V_PIN_bm       PIN4_bm
     #define EN_SENS12V_PIN_bp       PIN4_bp
     
-    #define SET_EN_SENS3V3()        ( EN_SENS3V3_PORT.OUT |= EN_SENS3V3_PIN_bm )
-    #define CLEAR_EN_SENS3V3()      ( EN_SENS3V3_PORT.OUT &= ~EN_SENS3V3_PIN_bm )
-    #define CONFIG_EN_SENS3V3()     ( EN_SENS3V3_PORT.DIR |= EN_SENS3V3_PIN_bm )
-
-    #define SET_EN_SENS12V()        ( EN_SENS12V_PORT.OUT |= EN_SENS12V_PIN_bm )
-    #define CLEAR_EN_SENS12V()      ( EN_SENS12V_PORT.OUT &= ~EN_SENS12V_PIN_bm )
-    #define CONFIG_EN_SENS12V()     ( EN_SENS12V_PORT.DIR |= EN_SENS12V_PIN_bm )
-
 #endif
 
 #ifdef MODEL_M1
 
-    //--------------------------------------------------------------------------
     // TWI PE0(SDA)/PE1(SCL)
     #define SCL_PORT        PORTE
     #define SCL             1
     #define SCL_PIN_bm      PIN1_bm
     #define SCL_PIN_bp      PIN1_bp
-
-    #define CONFIG_SCL()     SCL_PORT.DIR |= SCL_PIN_bm;
-    #define SET_SCL()        ( SCL_PORT.OUT |= SCL_PIN_bm )
-    #define CLEAR_SCL()		 ( SCL_PORT.OUT &= ~SCL_PIN_bm )
-    //--------------------------------------------------------------------------
     
-    #define PWR_SENSORS_PORT         PORTD
+    #define PWR_SENSORS_PORT         PORTA
     #define PWR_SENSORS              1
     #define PWR_SENSORS_PIN_bm       PIN1_bm
     #define PWR_SENSORS_PIN_bp       PIN1_bp
 
 #endif
 
-#define CONFIG_PWR_SENSORS()    (PWR_SENSORS_PORT.DIR |= PWR_SENSORS_PIN_bm)
-#define SET_PWR_SENSORS()       ( PWR_SENSORS_PORT.OUT |= PWR_SENSORS_PIN_bm )
-#define CLEAR_PWR_SENSORS()     ( PWR_SENSORS_PORT.OUT &= ~PWR_SENSORS_PIN_bm )
+void CONFIG_SCL(void);
+void SET_SCL(void);
+void CLEAR_SCL(void);
 
+void CONFIG_PWR_SENSORS(void);
+void SET_PWR_SENSORS(void);
+void CLEAR_PWR_SENSORS(void);
+
+void SET_EN_SENS3V3(void);
+void CLEAR_EN_SENS3V3(void);
+void CONFIG_EN_SENS3V3(void);
+
+void SET_EN_SENS12V(void);
+void CLEAR_EN_SENS12V(void);
+void CONFIG_EN_SENS12V(void);
 
 
 //------------------------------------------------------------------------------

@@ -23,6 +23,8 @@ void system_init(void)
     LED_init();
     XPRINTF_init();
     
+    ADC_init();
+    
     CONFIG_EN_SENS3V3();
     CONFIG_EN_SENS12V();
     CONFIG_PWR_SENSORS();
@@ -118,6 +120,7 @@ bool u_config_debug( char *tipo, char *valor)
     
     if (!strcmp_P( strupr(tipo), PSTR("NONE")) ) {
         ainputs_config_debug(false);
+        counter_config_debug(false);
         return(true); 
     }
    
@@ -128,6 +131,17 @@ bool u_config_debug( char *tipo, char *valor)
         }
         if (!strcmp_P( strupr(valor), PSTR("FALSE")) ) {
             ainputs_config_debug(false);
+            return(true);
+        }
+    }
+    
+        if (!strcmp_P( strupr(tipo), PSTR("COUNTER")) ) {
+        if (!strcmp_P( strupr(valor), PSTR("TRUE")) ) {
+            counter_config_debug(true);
+            return(true);
+        }
+        if (!strcmp_P( strupr(valor), PSTR("FALSE")) ) {
+            counter_config_debug(false);
             return(true);
         }
     }

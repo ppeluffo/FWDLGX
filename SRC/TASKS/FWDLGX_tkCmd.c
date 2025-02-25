@@ -154,16 +154,18 @@ static void cmdHelpFunction(void)
 		xprintf_P( PSTR("-config:\r\n"));
         xprintf_P( PSTR("  default {SPY,OSE}, save, load\r\n"));
         xprintf_P( PSTR("  modocomando\r\n"));
-        xprintf_P( PSTR("  debug {none,ainput} {true/false}\r\n"));
+        xprintf_P( PSTR("  debug {none,ainput,counter} {true/false}\r\n"));
         xprintf_P( PSTR("  ainput {0..%d} enable{true/false} aname imin imax mmin mmax offset\r\n"),( NRO_ANALOG_CHANNELS - 1 ) );
+        xprintf_P( PSTR("  counter enable{true/false} cname magPP modo(PULSO/CAUDAL)\r\n") );
         xprintf_P( PSTR("  dlgid\r\n"));
         xprintf_P( PSTR("  timerpoll,timerdial\r\n"));
-        xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}, pwron {hhmm}, pwroff {hhmm}\r\n"));
-        xprintf_P( PSTR("  counter enable{true/false} cname magPP modo(PULSO/CAUDAL)\r\n") );
+        xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}\r\n"));
+        xprintf_P( PSTR("  pwron {hhmm}, pwroff {hhmm}\r\n"));
+
         
     } else if (!strcmp_P( strupr(argv[1]), PSTR("TEST"))) {
 		xprintf_P( PSTR("-test\r\n"));
-        //xprintf_P( PSTR("  kill, wkill {wan,sys,modemrx}\r\n"));
+        xprintf_P( PSTR("  kill {sys}\r\n"));
         xprintf_P( PSTR("  valve {open|close}\r\n"));
         xprintf_P( PSTR("        {enable|ctl} {on|off}\r\n"));
         xprintf_P( PSTR("  pwr_sens3v3, pwr_sens12V,pwr_sensors {on|off}\r\n"));
@@ -217,7 +219,12 @@ static void cmdResetFunction(void)
         
         /*
          * No puedo estar usando la memoria !!!
-         */                       
+         */ 
+        if ( xHandle_tkSys != NULL ) {
+            vTaskSuspend( xHandle_tkSys );
+            xHandle_tkSys = NULL;
+        }
+        
         if ( !strcmp_P( strupr(argv[2]), PSTR("SOFT"))) {
 			FS_format(false );
 		} else if ( !strcmp_P( strupr(argv[2]), PSTR("HARD"))) {
@@ -392,7 +399,9 @@ fat_s l_fat;
     base_print_configuration();
     ainputs_print_configuration();
     counter_print_configuration();
-    
+
+    xprintf_P(PSTR(" Frame: "));
+    u_xprint_dr( get_dataRcd_ptr());
 }
 //------------------------------------------------------------------------------
 static void cmdTestFunction(void)
@@ -400,6 +409,25 @@ static void cmdTestFunction(void)
 
     FRTOS_CMD_makeArgv();
     
+    // KILL {sys,}
+    if (!strcmp_P( strupr(argv[1]), PSTR("KILL"))  ) {
+               
+        if (!strcmp_P( strupr(argv[2]), PSTR("SYS"))  ) {
+            if ( xHandle_tkSys != NULL ) {
+                vTaskSuspend( xHandle_tkSys );
+                xHandle_tkSys = NULL;
+                SYSTEM_ENTER_CRITICAL();
+                //tk_running[TK_SYS] = false;
+                SYSTEM_EXIT_CRITICAL();
+            }
+            pv_snprintfP_OK();
+            return;
+        }
+        
+        pv_snprintfP_ERR();
+        return;
+    }
+
     // pwr_sens3v3, pwr_sens12V, pwr_sensors{enable|disable}
     if (!strcmp_P( strupr(argv[1]), PSTR("PWR_SENS12V"))  ) {
                
@@ -468,8 +496,7 @@ static void cmdConfigFunction(void)
     // COUNTER
     // counter enable cname magPP modo(PULSO/CAUDAL)
 	if (!strcmp_P( strupr(argv[1]), PSTR("COUNTER")) ) {
-        counter_config_channel( argv[2], argv[3], argv[4], argv[5] );
-        pv_snprintfP_OK();
+        counter_config_channel( argv[2], argv[3], argv[4], argv[5] ) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
 		return;
 	}
     
@@ -546,8 +573,7 @@ static void cmdConfigFunction(void)
     // AINPUT
 	// ainput {0..%d} enable aname imin imax mmin mmax offset
 	if (!strcmp_P( strupr(argv[1]), PSTR("AINPUT")) ) {
-		ainputs_config_channel ( atoi(argv[2]), argv[3], argv[4], argv[5], argv[6], argv[7], argv[8], argv[9]);
-        pv_snprintfP_OK();
+		ainputs_config_channel ( atoi(argv[2]), argv[3], argv[4], argv[5], argv[6], argv[7], argv[8], argv[9]) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
 		return;
 	}
 
