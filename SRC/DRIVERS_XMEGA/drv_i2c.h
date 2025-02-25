@@ -1,0 +1,57 @@
+/*
+ * drv_i2c_spx.h
+ *
+ *  Created on: 8 dic. 2018
+ *      Author: pablo
+ */
+
+#ifndef SRC_SPX_DRIVERS_DRV_I2C_SPX_H_
+#define SRC_SPX_DRIVERS_DRV_I2C_SPX_H_
+
+
+#include <avr/interrupt.h>
+#include <avr/io.h>
+#include <stdbool.h>
+#include <util/twi.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include "pines.h"
+#include "xprintf.h"
+
+#define I2C_DIRECTION_BIT_WRITE 0
+#define I2C_DIRECTION_BIT_READ  1
+#define I2C_MAXTRIES	5
+
+#define ACK 	0
+#define NACK 	1
+
+/*! Transaction result enumeration. */
+typedef enum TWIM_RESULT_enum {
+	TWIM_RESULT_UNKNOWN          = (0x00<<0),
+	TWIM_RESULT_OK               = (0x01<<0),
+	TWIM_RESULT_BUFFER_OVERFLOW  = (0x02<<0),
+	TWIM_RESULT_ARBITRATION_LOST = (0x03<<0),
+	TWIM_RESULT_BUS_ERROR        = (0x04<<0),
+	TWIM_RESULT_NACK_RECEIVED    = (0x05<<0),
+	TWIM_RESULT_FAIL             = (0x06<<0),
+	TWIM_RESULT_TIMEOUT          = (0x07<<0),
+} TWIM_RESULT_t;
+
+void drv_I2C_init( volatile TWI_t *twi, bool debug );
+void drv_I2C_reset( volatile TWI_t *twi, bool debug );
+int  drv_I2C_master_write ( volatile TWI_t *twi, 
+        const uint8_t devAddress, 
+        const uint16_t dataAddress, 
+        const uint8_t dataAddress_length, 
+        char *pvBuffer, 
+        size_t xBytes,
+        bool debug );
+int  drv_I2C_master_read  ( volatile TWI_t *twi, 
+        const uint8_t devAddress, 
+        const uint16_t dataAddress, 
+        const uint8_t dataAddress_length, 
+        char *pvBuffer, 
+        size_t xBytes, 
+        bool debug );
+
+#endif /* SRC_SPX_DRIVERS_DRV_I2C_SPX_H_ */
