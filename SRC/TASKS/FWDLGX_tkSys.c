@@ -31,11 +31,13 @@ uint32_t waiting_secs;
 		vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
     
     SYSTEM_ENTER_CRITICAL();
-    //tk_running[TK_SYS] = true;
+    tk_running[TK_SYS] = true;
     SYSTEM_EXIT_CRITICAL();
     
     xprintf_P(PSTR("Starting tkSys..\r\n"));
-        
+       
+    u_kick_wdt(TK_SYS, 120);
+    
     // Espero solo 10s para el primer poleo ( no lo almaceno !!)
     vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
     
@@ -57,14 +59,14 @@ uint32_t waiting_secs;
         waiting_secs = base_conf.timerpoll;
         while ( waiting_secs > 60 ) {
             
-            //u_kick_wdt(TK_SYS);
+            u_kick_wdt(TK_SYS, 120);
             
             vTaskDelayUntil( &xLastWakeTime, ( 60000 / portTICK_PERIOD_MS ) );
             xLastWakeTime = xTaskGetTickCount();
             waiting_secs -= 60;
         }
         // Espero el saldo
-        //u_kick_wdt(TK_SYS);
+        u_kick_wdt(TK_SYS, 120);
         vTaskDelayUntil( &xLastWakeTime, ( waiting_secs * 1000 / portTICK_PERIOD_MS ) );
     }
 

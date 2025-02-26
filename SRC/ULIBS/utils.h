@@ -22,7 +22,8 @@ extern "C" {
 #include "xprintf.h"
 #include "adc.h"
 #include "pines.h"
-    
+#include "ainputs.h"
+ 
 uint8_t u_hash(uint8_t seed, char ch );
 uint8_t u_checksum( uint8_t *s, uint16_t size );
 float u_read_bat3v3(bool debug);

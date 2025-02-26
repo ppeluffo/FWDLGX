@@ -315,7 +315,7 @@ uint16_t adc_acc;
 uint16_t ADC_read_sens12v(void)
 {
 
-uint16_t adc_acc;
+uint16_t adc_acc =0;
 
 #ifdef MODEL_M3
     adc_acc = ADC_read_multiple(ADC_MUXPOS_AIN11_gc, 64, false);

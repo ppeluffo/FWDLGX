@@ -86,17 +86,19 @@ float bat3v3 = 0.0;
     bat3v3 *= BAT3V3_FACTOR;
             
     CLEAR_EN_SENS3V3();
-    if(debug) {
-        xprintf_P(PSTR("BAT3v3: adc=%d, bat3v3=%0.2f\r\n"), adc, bat3v3);
-    }
     
 #endif
  
 #ifdef MODEL_M1
     // El model XMEGA no mide los 3V3. !!
     bat3v3 = -1.0;
+ 
 #endif
+
     
+    if(debug) {
+        xprintf_P(PSTR("BAT3v3: adc=%d, bat3v3=%0.2f\r\n"), adc, bat3v3);
+    }    
     return (bat3v3);
 }
 //------------------------------------------------------------------------------
@@ -122,9 +124,6 @@ float bat12v = 0.0;
     bat12v *= BAT12V_FACTOR;
     
     CLEAR_EN_SENS12V();
-    if(debug) {
-        xprintf_P(PSTR("BAT12v: adc=%d, bat12v=%0.2f\r\n"), adc, bat12v);
-    }
     
 #endif
  
@@ -137,6 +136,9 @@ float bat12v = 0.0;
     bat12v = mag;
 #endif
     
+    if(debug) {
+        xprintf_P(PSTR("BAT12v: adc=%d, bat12v=%0.2f\r\n"), adc, bat12v);
+    }
     return (bat12v);
 }
 //------------------------------------------------------------------------------

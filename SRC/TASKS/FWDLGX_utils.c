@@ -19,9 +19,10 @@ void system_init(void)
     // Init OUT OF RTOS !!!
     
 	CLKCTRL_init();
-    //WDT_init();
+    WDT_init();
     LED_init();
     XPRINTF_init();
+    MODEM_init();
     
     ADC_init();
     
@@ -104,10 +105,10 @@ void reset(void)
     
 }
 //------------------------------------------------------------------------------
-void u_kick_wdt( t_wdg_ids wdg_id)
+void u_kick_wdt( t_wdg_ids wdg_id, uint16_t wdg_timer)
 {
     // Pone el wdg correspondiente en true
-    tk_watchdog[wdg_id] = true;
+    tk_watchdog[wdg_id] = wdg_timer;
     
 }
 //------------------------------------------------------------------------------
@@ -135,7 +136,7 @@ bool u_config_debug( char *tipo, char *valor)
         }
     }
     
-        if (!strcmp_P( strupr(tipo), PSTR("COUNTER")) ) {
+    if (!strcmp_P( strupr(tipo), PSTR("COUNTER")) ) {
         if (!strcmp_P( strupr(valor), PSTR("TRUE")) ) {
             counter_config_debug(true);
             return(true);
@@ -159,6 +160,7 @@ void u_config_default( char *modo )
     base_config_defaults();
     ainputs_config_defaults();
     counter_config_defaults();
+    modem_config_defaults(modo);
     
 }
 //------------------------------------------------------------------------------
@@ -183,6 +185,12 @@ int16_t nvm_ptr;
 
     // COUNTER
     nvm_ptr = counter_save_config_in_NVM(nvm_ptr);
+    if (nvm_ptr == -1) {
+        return(false);
+    }
+
+    // MODEM
+    nvm_ptr = modem_save_config_in_NVM(nvm_ptr);
     if (nvm_ptr == -1) {
         return(false);
     }
@@ -222,6 +230,12 @@ int16_t nvm_ptr;
     if ( nvm_ptr == -1 ) {
         return(false);
     }
+
+    // MODEM
+    nvm_ptr = modem_load_config_from_NVM(nvm_ptr);
+    if ( nvm_ptr == -1 ) {
+        return(false);
+    }
     
     return(true);
 }
@@ -249,7 +263,8 @@ counter_value_t cnt;
             ainputs_read_channel ( channel, &mag, &raw );
         }
         dataRcd->ainputs[channel] = mag;
-    }       
+    }  
+    ainputs_sleep();
     ainputs_apagar_sensores();
     
     // COUNTER
@@ -335,5 +350,26 @@ uint8_t i;
     xprintf_P( PSTR("bt3v3=%0.2f;bt12v=%0.2f"), dr->bt3v3, dr->bt12v);
     
     xprintf_P( PSTR("\r\n"));
+}
+//------------------------------------------------------------------------------
+void u_print_tasks_running(void)
+{
+    
+    xprintf_P(PSTR("Tasks running:"));
+    
+    if ( tk_running[TK_CMD] ) {
+        xprintf_P(PSTR(" cmd[%d]"), tk_watchdog[TK_CMD]);
+    }
+    
+    if ( tk_running[TK_SYS] ) {
+        xprintf_P(PSTR(" sys[%d]"), tk_watchdog[TK_SYS]);
+    }
+
+    if ( tk_running[TK_WANRX] ) {
+        xprintf_P(PSTR(" wanrx[%d]"), tk_watchdog[TK_WANRX]);
+    }
+    
+    xprintf_P(PSTR("\r\n"));
+    
 }
 //------------------------------------------------------------------------------

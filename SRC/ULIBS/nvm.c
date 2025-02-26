@@ -181,7 +181,7 @@ void NVMEE_test_write( char *addr, char *str )
 
 uint8_t length = 0;
 char *p = NULL;
-
+int16_t retValue = -1;
 
 	p = str;
 	while (*p != 0) {
@@ -189,8 +189,11 @@ char *p = NULL;
 		length++;
 	}
 
-	NVMEE_write( (uint16_t)(atoi(addr)), str, length );
+	retValue = NVMEE_write( (uint16_t)(atoi(addr)), str, length );
 	xprintf_P( PSTR( "wr %d bytes\r\n"),length);
+    if ( retValue == -1 ) {
+        xprintf_P(PSTR("ERROR: NVMEE write retVal=-1\r\n"));
+    }
 	return;
 
 

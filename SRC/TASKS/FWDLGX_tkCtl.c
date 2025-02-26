@@ -13,11 +13,6 @@
 void sys_watchdog_check(void);
 void sys_daily_reset(void);
 
-const char string_0[] PROGMEM = "TK_CMD";
-const char string_1[] PROGMEM = "TK_SYS";
-
-const char * const wdg_names[] PROGMEM = { string_0, string_1 };
-
 //------------------------------------------------------------------------------
 void tkCtl(void * pvParameters)
 {
@@ -29,6 +24,7 @@ void tkCtl(void * pvParameters)
 ( void ) pvParameters;
 uint32_t ulNotificationValue;
 fat_s l_fat;
+uint8_t i;
 
 	vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     xprintf_P(PSTR("Starting tkCtl..\r\n"));
@@ -81,6 +77,7 @@ fat_s l_fat;
         {
             xprintf_P(PSTR("COUNTER: PULSOS=%d, CAUDAL=%0.3f, PW(secs)=%0.3f\r\n"), contador.pulsos, contador.caudal, contador.T_secs );  
         }
+        
 	}
 }
 //------------------------------------------------------------------------------
@@ -95,45 +92,24 @@ void sys_watchdog_check(void)
      * 
      */
     
-static uint16_t wdg_count = 0;
 uint8_t i;
-char strBuffer[15] = { '\0' } ;
 
     /*
      * Cada 5s entro y reseteo el watchdog.
      * 
      */
     wdt_reset();
-    return;
+    //return;
           
-    /* EL wdg lo leo cada 240secs ( 5 x 60 )
-     * Chequeo que cada tarea haya reseteado su wdg
-     * ( debe haberlo puesto en true )
-     */
-    
-    if ( wdg_count++ <  (120 / TKCTL_DELAY_S ) ) {
-        return;
-    }
-    
-    //xprintf_P(PSTR("DEBUG: wdg check\r\n"));
-    wdg_count = 0;
-    
     // Analizo los watchdows individuales
-    //xTaskNotifyGive( xHandle_tkCmd);
-    //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-    //xprintf_P(PSTR("tkCtl: check wdg\r\n") );
-    for (i = 0; i < RUNNING_TASKS; i++) {
+    for (i = 0; i < NRO_TASKS; i++) {
         //xprintf_P(PSTR("tkCtl: check wdg[%d]->[%d][%d]\r\n"), i,tk_running[i], tk_watchdog[i]  );
         // Si la tarea esta corriendo...
         if ( tk_running[i] ) {
-            // Si el wdg esta false es que no pudo borrarlo ( pasarlo a true) !!!
-            if ( ! tk_watchdog[i] ) {
-                          
-                xTaskNotifyGive( xHandle_tkCmd);
-                vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-                memset(strBuffer,'\0', sizeof(strBuffer));
-				strcpy_P(strBuffer, (PGM_P)pgm_read_word(&(wdg_names[i])));
-				xprintf_P( PSTR("ALARM !!!. TKCTL: RESET BY WDG (%s) !!\r\n"),strBuffer);     
+            tk_watchdog[i] -= TKCTL_DELAY_S;
+            
+            // Si el wdg llego a 0 es que no pudo borrarlo  !!!
+            if ( tk_watchdog[i] <= 0 ) {        
                 xprintf_P( PSTR("ALARM !!!. TKCTL: RESET BY WDG %d\r\n"), i );
                 //reset();
                 
@@ -142,11 +118,6 @@ char strBuffer[15] = { '\0' } ;
                 
             }
         }
-    }
-
-    // Inicializo el vector de watchdogs
-    for (i=0; i< RUNNING_TASKS; i++) {
-        tk_watchdog[i] = false;
     }
     
 }

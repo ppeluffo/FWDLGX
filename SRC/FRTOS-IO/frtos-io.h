@@ -36,7 +36,8 @@
 
 typedef enum {
     
-	fdTERM = 0,  
+	fdTERM = 0,
+    fdWAN,
     fdI2C,
     fdNVM
             

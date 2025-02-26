@@ -77,7 +77,7 @@ extern "C" {
 #include "base.h"
 #include "ainputs.h"
 #include "contadores.h"
-
+#include "modem_lte.h"
 
 #ifdef MODEL_M1
 
@@ -116,10 +116,12 @@ extern "C" {
 #define tkCtl_TASK_PRIORITY	 	( tskIDLE_PRIORITY + 1 )
 #define tkCmd_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
 #define tkSys_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
+#define tkWANRX_TASK_PRIORITY	( tskIDLE_PRIORITY + 1 )
 
 #define tkCtl_STACK_SIZE		384
 #define tkCmd_STACK_SIZE		512
 #define tkSys_STACK_SIZE		512
+#define tkWANRX_STACK_SIZE      384
 
 StaticTask_t tkCtl_Buffer_Ptr;
 StackType_t tkCtl_Buffer [tkCtl_STACK_SIZE];
@@ -130,11 +132,15 @@ StackType_t tkCmd_Buffer [tkCmd_STACK_SIZE];
 StaticTask_t tkSys_Buffer_Ptr;
 StackType_t tkSys_Buffer [tkSys_STACK_SIZE];
 
-TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys;
+StaticTask_t tkWANRX_Buffer_Ptr;
+StackType_t tkWANRX_Buffer [tkWANRX_STACK_SIZE];
+
+TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkWANRX;
 
 void tkCtl(void * pvParameters);
 void tkCmd(void * pvParameters);
 void tkSys(void * pvParameters);
+void tkWanRX(void * pvParameters);
 
 bool starting_flag;
 
@@ -158,20 +164,22 @@ bool u_config_debug( char *tipo, char *valor);
 void u_config_default( char *modo );
 bool u_save_config_in_NVM(void);
 bool u_load_config_from_NVM(void);
+dataRcd_s *get_dataRcd_ptr(void);
 bool u_poll_data(dataRcd_s *dataRcd);
 void u_xprint_dr(dataRcd_s *dr);
+void u_print_tasks_running(void);
 
 //------------------------------------------------------------------------------
 // Task running & watchdogs
-#define RUNNING_TASKS   1
+#define NRO_TASKS  3
 
-typedef enum { TK_CMD = 0} t_wdg_ids;
+typedef enum { TK_CMD = 0, TK_SYS, TK_WANRX } t_wdg_ids;
 
-bool tk_running[RUNNING_TASKS];
-bool tk_watchdog[RUNNING_TASKS];
+void u_kick_wdt( t_wdg_ids wdg_id, uint16_t wdg_timer);
 
-void u_kick_wdt( t_wdg_ids wdg_id);
-void u_print_watchdogs(void);
+bool tk_running[NRO_TASKS];
+
+int16_t tk_watchdog[NRO_TASKS];
 
 uint8_t wdg_resetCause;
 

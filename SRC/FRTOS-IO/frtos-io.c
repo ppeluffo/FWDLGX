@@ -27,6 +27,11 @@ int16_t xRet = -1;
         xRet=0;
 		break;
         
+    case fdWAN:
+        frtos_open_uart(&USART3, flags);
+        xRet=0;
+		break;
+        
     case fdI2C:
 		xRet = frtos_open_i2c( &TWI1, &xBusI2C, fd, &I2C_xMutexBuffer, flags );
 		break;
@@ -43,7 +48,12 @@ int16_t xRet = -1;
         drv_uart2_init(flags);
         xRet=0;
 		break;
-     
+ 
+    case fdWAN:
+        drv_uart1_init(flags);
+        xRet=0;
+		break;
+        
     case fdI2C:
 		xRet = frtos_open_i2c( NULL, &xBusI2C, fd, &I2C_xMutexBuffer, flags );
 		break;
@@ -73,6 +83,10 @@ int16_t xRet = -1;
         case fdTERM:
             xRet = frtos_ioctl_uart0( ulRequest, pvValue );
             break;
+ 
+        case fdWAN:
+            xRet = frtos_ioctl_uart3( ulRequest, pvValue );
+            break;
             
         case fdI2C:
             xRet = frtos_ioctl_i2c( &TWI1, &xBusI2C, ulRequest, pvValue );
@@ -90,6 +104,10 @@ int16_t xRet = -1;
             xRet = frtos_ioctl_uart2( ulRequest, pvValue );
             break;
 
+        case fdWAN:
+            xRet = frtos_ioctl_uart1( ulRequest, pvValue );
+            break;
+            
         case fdI2C:
             xRet = frtos_ioctl_i2c( NULL, &xBusI2C, ulRequest, pvValue );
             break;
@@ -118,6 +136,10 @@ int16_t xRet = -1;
 	case fdTERM:
 		xRet = frtos_write_uart0( pvBuffer, xBytes );
 		break;
+ 
+    case fdWAN:
+		xRet = frtos_write_uart3( pvBuffer, xBytes );
+		break;
         
     case fdI2C:
 		xRet = frtos_write_i2c( &TWI1, &xBusI2C, pvBuffer, xBytes );
@@ -135,6 +157,10 @@ int16_t xRet = -1;
 		xRet = frtos_write_uart2( pvBuffer, xBytes );
 		break;
 
+    case fdWAN:
+		xRet = frtos_write_uart1( pvBuffer, xBytes );
+		break;
+        
     case fdI2C:
 		xRet = frtos_write_i2c( NULL, &xBusI2C, pvBuffer, xBytes );
 		break;
@@ -164,7 +190,11 @@ int16_t xRet = -1;
 	case fdTERM:
 		xRet = frtos_read_uart0( pvBuffer, xBytes );
 		break;
-                
+ 
+    case fdWAN:
+		xRet = frtos_read_uart3( pvBuffer, xBytes );
+		break;
+        
     case fdI2C:
 		xRet = frtos_read_i2c( &TWI1, &xBusI2C, pvBuffer, xBytes );
 		break;
@@ -181,6 +211,10 @@ int16_t xRet = -1;
 		xRet = frtos_read_uart2( pvBuffer, xBytes );
 		break;
 
+    case fdWAN:
+		xRet = frtos_read_uart1( pvBuffer, xBytes );
+		break;
+        
     case fdI2C:
 		xRet = frtos_read_i2c( NULL, &xBusI2C, pvBuffer, xBytes );
 		break;
@@ -225,14 +259,19 @@ void frtos_open_uart( volatile USART_t *uart, uint32_t baudrate)
 
 #endif
     
+#ifdef MODEL_M1
+    // Se inician en frtos_open
+#endif
+    
 }
 //------------------------------------------------------------------------------
 int16_t frtos_write_uart0( const char *pvBuffer, const uint16_t xBytes )
 {
-    
-uint16_t i;
+
     
 #ifdef MODEL_M3
+
+uint16_t i;
 
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
@@ -258,9 +297,9 @@ int16_t frtos_write_uart1( const char *pvBuffer, const uint16_t xBytes )
 {
     
 uint16_t i;
-  
-#ifdef MODEL_M3
 
+#ifdef MODEL_M3
+    
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
     for( i = 0; i < xBytes; i++) {
@@ -277,6 +316,15 @@ uint16_t i;
     USART1.STATUS |= ( 1 << USART_TXCIF_bp);
 
 #endif
+  
+#ifdef MODEL_M1
+    
+    for( i = 0; i < xBytes; i++) {
+        while(! USART_IsTXDataRegisterEmpty(&USARTE0) )
+            ;
+        USART_PutChar(&USARTE0, pvBuffer[i]);
+    }
+#endif
     
     vTaskDelay( ( TickType_t)( 1 ) );
     return(xBytes);   
@@ -284,9 +332,10 @@ uint16_t i;
 //------------------------------------------------------------------------------
 int16_t frtos_write_uart2( const char *pvBuffer, const uint16_t xBytes )
 {
-    
-uint16_t i;
+
   
+uint16_t i;
+
 #ifdef MODEL_M3
 
     // Transmision x poleo ( No hablito al INT x DRIE )
@@ -321,10 +370,10 @@ uint16_t i;
 //------------------------------------------------------------------------------
 int16_t frtos_write_uart3( const char *pvBuffer, const uint16_t xBytes )
 {
-    
-uint16_t i;
    
 #ifdef MODEL_M3
+
+uint16_t i;
 
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
@@ -909,15 +958,19 @@ nvmctrl_status_t nvm_status;
         return(xBytes);
     }
     
+    return(-1);
+    
 #endif
 
 #ifdef MODEL_M1
     
+    // Esta funcion es void !!!
     nvm_eeprom_erase_and_write_buffer( xNVM->eeAddress, (uint8_t *)pvBuffer, xBytes);
+    return(xBytes);
     
 #endif
    
-    return(-1);
+    
 
 }
 //------------------------------------------------------------------------------

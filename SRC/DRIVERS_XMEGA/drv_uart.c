@@ -69,6 +69,45 @@ void drv_set_baudrate(uint32_t baudRate, uint8_t *baudA, uint8_t *baudB, uint8_t
 }
 
 //------------------------------------------------------------------------------
+void drv_uart1_init(uint32_t baudrate )
+{
+    
+uint8_t baudA, baudB, ctl;
+
+    PORTE.DIRSET   = PIN3_bm;	// PE3 (TXD0) as output.
+	PORTE.DIRCLR   = PIN2_bm;	// PE2 (RXD0) as input.
+	// USARTE0, 8 Data bits, No Parity, 1 Stop bit.
+	USARTE0.CTRLC = (uint8_t) USART_CHSIZE_8BIT_gc | USART_PMODE_DISABLED_gc;
+    
+    ctl = USARTE0.CTRLB;
+	drv_set_baudrate( baudrate, &baudA, &baudB, &ctl);
+	USARTE0.BAUDCTRLA = baudA;
+	USARTE0.BAUDCTRLB = baudB;
+	USARTE0.CTRLB = ctl;
+    
+	// Habilito la TX y RX
+	USARTE0.CTRLB |= USART_RXEN_bm;
+	USARTE0.CTRLB |= USART_TXEN_bm;
+    
+	// Habilito la interrupcion de Recepcion ( low level )
+	// low level, RXint enabled
+	USARTE0.CTRLA = ( USARTE0.CTRLA & ~USART_RXCINTLVL_gm ) | USART_RXCINTLVL_LO_gc;
+    // Las transmisiones son por poleo no INT.
+    
+    rBchar_CreateStatic ( &TXRB_uart1, &uart1_txBuffer[0], UART1_TXSIZE  );
+    rBchar_CreateStatic ( &RXRB_uart1, &uart1_rxBuffer[0], UART1_RXSIZE  );
+
+}
+//------------------------------------------------------------------------------
+ISR(USARTE0_RXC_vect)
+{
+
+char cChar;
+
+	cChar = USARTE0.DATA;
+	rBchar_PokeFromISR( &RXRB_uart1, cChar );
+}
+//------------------------------------------------------------------------------
 void drv_uart2_init(uint32_t baudrate )
 {
     

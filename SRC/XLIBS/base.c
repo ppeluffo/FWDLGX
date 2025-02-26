@@ -144,10 +144,13 @@ uint8_t cks;
     // AINPUTS
     cks = u_checksum ( (uint8_t *)&base_conf, ( sizeof(base_conf) - 1));
     base_conf.checksum = cks;
+    //xprintf_P(PSTR("DEBUG: SAVE NVM Base. cks=%d, nvm_ptr=%d\r\n"), cks, nvm_ptr);   
     retVal = NVMEE_write( nvm_ptr, (char *)&base_conf, sizeof(base_conf) );
     xprintf_P(PSTR("SAVE NVM Base: memblock size = %d\r\n"), sizeof(base_conf));       
-    if (retVal == -1 )
+    if (retVal == -1 ) {
+        xprintf_P(PSTR("ERROR: SAVE NVM Base ret=-1\r\n"));     
         return(-1);
+    }
     
     nvm_ptr += sizeof(base_conf);
     

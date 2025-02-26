@@ -254,6 +254,7 @@ uint8_t i;
     system_init();
     
     frtos_open(fdTERM, 9600 );
+    frtos_open(fdWAN, 115200 );
     frtos_open(fdNVM, 0 );   
     frtos_open(fdI2C, 100 );
     
@@ -266,15 +267,16 @@ uint8_t i;
     // Inicializaciones sin el RTOS corriendo
     ainputs_init_outofrtos();
     counter_init_outofrtos(&xHandle_tkCtl);
+    modem_init_outofrtos(&xHandle_tkWANRX);
     
     // Inicializo el vector de tareas activas
-    for (i=0; i< RUNNING_TASKS; i++) {
+    for (i=0; i< NRO_TASKS; i++) {
         tk_running[i] = false;
     }
 
-    // Inicializo el vector de watchdogs
-    for (i=0; i< RUNNING_TASKS; i++) {
-        tk_watchdog[i] = false;
+    // Inicializo el vector de watchdogs ( 5 minutos para c/tarea)
+    for (i=0; i< NRO_TASKS; i++) {
+        tk_watchdog[i] = 60;
     }
     
     starting_flag = false;
@@ -282,6 +284,7 @@ uint8_t i;
     xHandle_tkCtl = xTaskCreateStatic( tkCtl, "CTL", tkCtl_STACK_SIZE, (void *)1, tkCtl_TASK_PRIORITY, tkCtl_Buffer, &tkCtl_Buffer_Ptr );
     xHandle_tkCmd = xTaskCreateStatic( tkCmd, "CMD", tkCmd_STACK_SIZE, (void *)1, tkCmd_TASK_PRIORITY, tkCmd_Buffer, &tkCmd_Buffer_Ptr );
     xHandle_tkSys = xTaskCreateStatic( tkSys, "SYS", tkSys_STACK_SIZE, (void *)1, tkSys_TASK_PRIORITY, tkSys_Buffer, &tkSys_Buffer_Ptr );
+    xHandle_tkWANRX = xTaskCreateStatic( tkWanRX, "WANRX", tkWANRX_STACK_SIZE, (void *)1, tkWANRX_TASK_PRIORITY, tkWANRX_Buffer, &tkWANRX_Buffer_Ptr );
 
     /* Arranco el RTOS. */
 	vTaskStartScheduler();

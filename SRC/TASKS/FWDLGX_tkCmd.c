@@ -61,7 +61,7 @@ uint8_t c = 0;
     // Arranco el timer que controla el tiempo que estamos awake
     cmd_xTimer = xTimerCreateStatic (
         "CMDT",
-		pdSECS_TO_TICKS(120),           // periodo en ticks
+		pdSECS_TO_TICKS(30),           // periodo en ticks
 		pdFALSE,                        // One-shot.
 		( void * ) 0,
 		cmd_TimerCallback,
@@ -72,7 +72,8 @@ uint8_t c = 0;
             
     for(;;)
     {
-        u_kick_wdt(TK_CMD);
+        // Reseteo el watchdog a 30s
+        u_kick_wdt(TK_CMD, 60);
         
         switch (cmd_state) {
             
@@ -100,7 +101,7 @@ uint8_t c = 0;
                 
                 // Si presione una tecla me despierto. Reseteo el timer
                 // Lo reconfiguro siempre para 2MINS.
-                xTimerChangePeriod( cmd_xTimer, pdSECS_TO_TICKS(120), 10 );
+                xTimerChangePeriod( cmd_xTimer, pdSECS_TO_TICKS(30), 10 );
                 xTimerStart(cmd_xTimer, 10); 
                 cmd_state = CMD_AWAKE;
             } 
@@ -161,15 +162,18 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  timerpoll,timerdial\r\n"));
         xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}\r\n"));
         xprintf_P( PSTR("  pwron {hhmm}, pwroff {hhmm}\r\n"));
+        xprintf_P( PSTR("  modem {apn|ip|port}\r\n"));
 
         
     } else if (!strcmp_P( strupr(argv[1]), PSTR("TEST"))) {
 		xprintf_P( PSTR("-test\r\n"));
-        xprintf_P( PSTR("  kill {sys}\r\n"));
+        xprintf_P( PSTR("  kill {sys, wanrx}\r\n"));
         xprintf_P( PSTR("  valve {open|close}\r\n"));
         xprintf_P( PSTR("        {enable|ctl} {on|off}\r\n"));
         xprintf_P( PSTR("  pwr_sens3v3, pwr_sens12V,pwr_sensors {on|off}\r\n"));
-
+        xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|save}\r\n"));
+        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip port}], ftime {time_ms}]\r\n"));
+        
         //xprintf_P( PSTR("  sens3v3, sens12V, pwr_sensors {enable|disable}\r\n"));
         //xprintf_P( PSTR("  pwr_cpres,pwr_sensext,pwr_qmbus {enable|disable}\r\n"));
         //xprintf_P( PSTR("  rts {on|off}\r\n"));
@@ -223,11 +227,20 @@ static void cmdResetFunction(void)
         if ( xHandle_tkSys != NULL ) {
             vTaskSuspend( xHandle_tkSys );
             xHandle_tkSys = NULL;
+            tk_running[TK_SYS] = false;
+        }
+
+        if ( xHandle_tkWANRX != NULL ) {
+            vTaskSuspend( xHandle_tkSys );
+            xHandle_tkWANRX = NULL;
+            tk_running[TK_WANRX] = false;
         }
         
         if ( !strcmp_P( strupr(argv[2]), PSTR("SOFT"))) {
 			FS_format(false );
 		} else if ( !strcmp_P( strupr(argv[2]), PSTR("HARD"))) {
+            // Para que no se resetee x watchdog !!
+            u_kick_wdt(TK_CMD, 240);
 			FS_format(true);
 		} else {
 			xprintf_P( PSTR("ERROR\r\nUSO: reset memory {hard|soft}\r\n"));
@@ -386,16 +399,21 @@ fat_s l_fat;
     xprintf_P(PSTR("id: %s\r\n"), NVM_id2str());
     xprintf_P(PSTR("sign: %s\r\n"), NVM_signature2str());
     
+    xRemainingTime = xTimerGetExpiryTime( cmd_xTimer ) - xTaskGetTickCount();
+    xprintf_P(PSTR("TERM remain time: %lu s\r\n"), pdTICS_TO_SECS(xRemainingTime) );
+    
+    u_print_tasks_running();
+     
     xprintf_P(PSTR("Config:\r\n"));
     xprintf_P(PSTR(" date: %s\r\n"), RTC_logprint(FORMAT_LONG));
-    
-    xRemainingTime = xTimerGetExpiryTime( cmd_xTimer ) - xTaskGetTickCount();
-    xprintf_P(PSTR("Remain time: %lu s\r\n"), pdTICS_TO_SECS(xRemainingTime) );
-    
+        
         // Stats de memoria
     FAT_read(&l_fat);
     xprintf_P( PSTR(" memory: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat.head,l_fat.tail, l_fat.count );
 
+    u_print_tasks_running();
+    
+    modem_print_configuration();
     base_print_configuration();
     ainputs_print_configuration();
     counter_print_configuration();
@@ -409,6 +427,18 @@ static void cmdTestFunction(void)
 
     FRTOS_CMD_makeArgv();
     
+    // MODEM
+    // modem {prender|apagar|atmode|exitat}
+    //       modem set [apn {apn}, apiurl {apiurl}, server {ip port}], ftime {time_ms}]
+     if (!strcmp_P( strupr(argv[1]), PSTR("MODEM"))  ) {
+        if ( modem_test( argv ) ) {
+            pv_snprintfP_OK();
+        } else {
+            pv_snprintfP_ERR();
+        }
+        return;
+    }
+    
     // KILL {sys,}
     if (!strcmp_P( strupr(argv[1]), PSTR("KILL"))  ) {
                
@@ -416,9 +446,17 @@ static void cmdTestFunction(void)
             if ( xHandle_tkSys != NULL ) {
                 vTaskSuspend( xHandle_tkSys );
                 xHandle_tkSys = NULL;
-                SYSTEM_ENTER_CRITICAL();
-                //tk_running[TK_SYS] = false;
-                SYSTEM_EXIT_CRITICAL();
+                tk_running[TK_SYS] = false;
+            }
+            pv_snprintfP_OK();
+            return;
+        }
+        
+    if (!strcmp_P( strupr(argv[2]), PSTR("WANRX"))  ) {
+            if ( xHandle_tkWANRX != NULL ) {
+                vTaskSuspend( xHandle_tkWANRX );
+                xHandle_tkWANRX = NULL;
+                tk_running[TK_WANRX] = false;
             }
             pv_snprintfP_OK();
             return;
@@ -493,6 +531,13 @@ static void cmdConfigFunction(void)
     
     FRTOS_CMD_makeArgv();
 
+    // MODEM:
+    // config modem {apn|ip|port}
+    if ( strcmp_P ( strupr( argv[1]), PSTR("MODEM")) == 0 ) {
+        modem_config( argv[2], argv[3]) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
+        return;
+    }
+    
     // COUNTER
     // counter enable cname magPP modo(PULSO/CAUDAL)
 	if (!strcmp_P( strupr(argv[1]), PSTR("COUNTER")) ) {
