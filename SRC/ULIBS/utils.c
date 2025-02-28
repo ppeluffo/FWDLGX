@@ -142,6 +142,128 @@ float bat12v = 0.0;
     return (bat12v);
 }
 //------------------------------------------------------------------------------
+uint32_t u_get_sleep_time(bool debug)
+{
+    /*
+     * De acuerdo al pwrmodo determina cuanto debe estar 
+     * apagado en segundos.
+     * 
+     */
+    
+RtcTimeType_t rtc;
+uint16_t now;
+uint16_t pwr_on;
+uint16_t pwr_off;
+uint32_t waiting_secs;
+
+    switch(base_conf.pwr_modo) {
+        case PWR_CONTINUO:
+            if (debug) {
+                xprintf_P(PSTR("SLEEP_TIME: pwr_continuo\r\n"));
+            }
+            waiting_secs = 0;
+            break;
+        case PWR_DISCRETO:
+            if (debug) {
+                xprintf_P(PSTR("SLEEP_TIME: pwr_discreto\r\n"));
+            }
+            waiting_secs = base_conf.timerdial; 
+            break;
+        case PWR_MIXTO:
+            // Hay que ver en que intervalo del modo mixto estoy
+            RTC_read_dtime(&rtc);
+            now = rtc.hour * 100 + rtc.min;
+            pwr_on = base_conf.pwr_hhmm_on;
+            pwr_off = base_conf.pwr_hhmm_off;
+            if (debug) {
+                xprintf_P(PSTR("SLEEP_TIME A: now=%d, pwr_on=%d, pwr_off=%d\r\n"), now, pwr_on,pwr_off);
+            }
+            now = u_hhmm_to_mins(now);
+            pwr_on = u_hhmm_to_mins( pwr_on );
+            pwr_off = u_hhmm_to_mins( pwr_off );
+            if (debug) {
+                xprintf_P(PSTR("SLEEP_TIME B: now=%d, pwr_on=%d, pwr_off=%d\r\n"), now, pwr_on,pwr_off);
+            }
+                    
+            if ( pwr_on < pwr_off) {
+                // Caso A:
+                // |----apagado-----|----continuo----|---apagado---|
+                // 0     (A)      pwr_on   (B)    pwr_off  (C)   2400
+                //
+                if ( now < pwr_on ) {
+                    // Estoy en A:mixto->apagado
+                    if (debug) {
+                        xprintf_P(PSTR("SLEEP_TIME: pwr_mixto_A\r\n"));
+                    }                    
+                    waiting_secs = (pwr_on - now)*60;
+                } else if ( now < pwr_off) {
+                    // Estoy en B:mixto->continuo
+                    if (debug) { 
+                        xprintf_P(PSTR("SLEEP_TIME: pwr_mixto_B\r\n"));
+                    }
+                    waiting_secs = 0;
+                } else {
+                    // Estoy en C:mixto->apagado
+                    if (debug) {
+                        xprintf_P(PSTR("SLEEP_TIME: pwr_mixto_C\r\n"));
+                    }
+                    waiting_secs = (1440 - now + pwr_on)*60;
+                }
+            
+            } else {
+                // Caso B:
+                // |----continuo-----|----apagado----|---continuo---|
+                // 0     (D)      pwr_off   (E)    pwr_on  (F)    2400
+                //
+                if ( now < pwr_off) {
+                    // Estoy en D: mixto->continuo
+                    if (debug) {
+                        xprintf_P(PSTR("SLEEP_TIME: pwr_mixto_D\r\n"));
+                    }
+                    waiting_secs = 0;
+                } else if (now < pwr_on) {
+                    // Estoy en E: mixto->apagado
+                    if (debug) {
+                        xprintf_P(PSTR("SLEEP_TIME: pwr_mixto_E\r\n"));
+                    }
+                    waiting_secs = (pwr_on - now)*60;
+                } else {
+                    // Estoy en F:mixto->prendido
+                    if (debug) {
+                        xprintf_P(PSTR("SLEEP_TIME: pwr_mixto_F\r\n"));
+                    }
+                    waiting_secs = 0;
+                }
+            } 
+            break;
+        default:
+            // En default, dormimos 30 minutos
+            waiting_secs = 1800;
+            break;
+    }
+    
+    if (debug) {
+        xprintf_P(PSTR("SLEEP_TIME: waiting_ticks=%lu secs\r\n"), waiting_secs);
+    }
+    return(waiting_secs);
+}
+//------------------------------------------------------------------------------
+uint16_t u_hhmm_to_mins(uint16_t hhmm)
+{
+    /*
+     * Convierte una hora (hhmm) en minutos (0..1440)
+     */
+    
+uint16_t hh,mm, mins;
+
+    hh = (uint16_t) (hhmm / 100);
+    mm = hhmm - hh * 100;
+    mins = hh*60 + mm;
+    return (mins);
+    
+}
+//------------------------------------------------------------------------------
+
 void SYSTEM_INIT(void)
 {
     sem_SYSVars = xSemaphoreCreateMutexStatic( &SYSVARS_xMutexBuffer );

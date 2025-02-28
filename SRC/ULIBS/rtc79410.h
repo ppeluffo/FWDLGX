@@ -57,6 +57,7 @@ bool RTC_write_time( char *stime );
 void RTC_read_time(  bool format_long );
 char *RTC_logprint( bool format_long );
 bool RTC_has_drift(RtcTimeType_t *rtc_new, uint16_t max_drift );
+void RTC_resync( char *str_time, bool force_adjust);
 
 // API END
 //--------------------------------------------------------------------------------

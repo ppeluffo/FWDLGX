@@ -53,7 +53,7 @@ uint32_t waiting_secs;
         u_xprint_dr(&dataRcd);
         
         // Envio a tkWAN
-        //WAN_process_data_rcd(&dataRcd);
+        WAN_process_data_rcd(&dataRcd);
                 
         // Espero
         waiting_secs = base_conf.timerpoll;

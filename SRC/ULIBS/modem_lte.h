@@ -20,6 +20,7 @@ extern "C" {
 #include "string.h"
 #include "xgetc.h"
 #include "ctype.h"
+#include "utils.h"
 //--------------------------------------------------------------------------
 // PUSR WH-LTE-7S1
     

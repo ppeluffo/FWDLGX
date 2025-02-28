@@ -424,3 +424,61 @@ static char pv_bcd2dec(char num)
 	return ((num/16 * 10) + (num % 16));
 }
 //------------------------------------------------------------------------------------
+void RTC_resync( char *str_time, bool force_adjust)
+{
+	/*
+	 * Ajusta el clock interno de acuerdo al valor de rtc_s
+     * Si force_adjust es TRUE siempre lo ajusta.
+     * Si es FALSE, solo lo ajusta si la diferencia con la hora actual son mas
+     * de 90 segundos
+     * 
+	 * Bug 01: 2021-12-14:
+	 * El ajuste no considera los segundos entonces si el timerpoll es c/15s, cada 15s
+	 * se reajusta y cambia la hora del datalogger.
+	 * Modifico para que el reajuste se haga si hay una diferencia de mas de 90s entre
+	 * el reloj local y el del server
+	 */
+
+
+float diff_seconds;
+RtcTimeType_t rtc_l, rtc_w;
+int8_t xBytes = 0;
+   
+    // Convierto el string YYMMDDHHMM a RTC.
+    //xprintf_P(PSTR("DATA: DEBUG CLOCK2\r\n") );
+    memset( &rtc_w, '\0', sizeof(rtc_w) );        
+    RTC_str2rtc( str_time, &rtc_w);
+    //xprintf_P(PSTR("DATA: DEBUG CLOCK3\r\n") );
+            
+            
+	if ( force_adjust ) {
+		// Fuerzo el ajuste.( al comienzo )
+		xBytes = RTC_write_dtime(&rtc_w);		// Grabo el RTC
+		if ( xBytes == -1 ) {
+			xprintf_P(PSTR("ERROR: CLOCK: I2C:RTC:pv_process_server_clock\r\n"));
+		} else {
+			xprintf_P( PSTR("CLOCK: Update rtc.\r\n") );
+		}
+		return;
+	}
+
+	// Solo ajusto si la diferencia es mayor de 90s
+	// Veo la diferencia de segundos entre ambos.
+	// Asumo yy,mm,dd iguales
+	// Leo la hora actual del datalogger
+	RTC_read_dtime( &rtc_l);
+	diff_seconds = abs( rtc_l.hour * 3600 + rtc_l.min * 60 + rtc_l.sec - ( rtc_w.hour * 3600 + rtc_w.min * 60 + rtc_w.sec));
+	//xprintf_P( PSTR("COMMS: rtc diff=%.01f\r\n"), diff_seconds );
+
+	if ( diff_seconds > 90 ) {
+		// Ajusto
+		xBytes = RTC_write_dtime(&rtc_w);		// Grabo el RTC
+		if ( xBytes == -1 ) {
+			xprintf_P(PSTR("ERROR: CLOCK: I2C:RTC:pv_process_server_clock\r\n"));
+		} else {
+			xprintf_P( PSTR("CLOCK: Update rtc\r\n") );
+		}
+		return;
+	}
+}
+//------------------------------------------------------------------------------

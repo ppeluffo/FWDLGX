@@ -23,11 +23,16 @@ extern "C" {
 #include "adc.h"
 #include "pines.h"
 #include "ainputs.h"
+#include "rtc79410.h"
+#include "base.h"
+    
  
 uint8_t u_hash(uint8_t seed, char ch );
 uint8_t u_checksum( uint8_t *s, uint16_t size );
 float u_read_bat3v3(bool debug);
 float u_read_bat12v(bool debug);
+uint16_t u_hhmm_to_mins(uint16_t hhmm);
+uint32_t u_get_sleep_time(bool debug);
 
 #define MSTOTAKESYSVARSSEMPH ((  TickType_t ) 10 )
 

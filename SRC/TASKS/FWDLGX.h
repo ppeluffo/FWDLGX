@@ -107,7 +107,7 @@ extern "C" {
 #endif
                 
 #define FW_REV "1.0.0"
-#define FW_DATE "@ 20250225"
+#define FW_DATE "@ 20250228"
 #define FRTOS_VERSION "FW:FreeRTOS 202212.01"
 
 #define pdSECS_TO_TICKS(xTimeInSecs) ((TickType_t)(((uint32_t)(xTimeInSecs) * (uint32_t)configTICK_RATE_HZ) ))
@@ -117,11 +117,13 @@ extern "C" {
 #define tkCmd_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
 #define tkSys_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
 #define tkWANRX_TASK_PRIORITY	( tskIDLE_PRIORITY + 1 )
+#define tkWAN_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
 
 #define tkCtl_STACK_SIZE		384
 #define tkCmd_STACK_SIZE		512
 #define tkSys_STACK_SIZE		512
 #define tkWANRX_STACK_SIZE      384
+#define tkWAN_STACK_SIZE		512
 
 StaticTask_t tkCtl_Buffer_Ptr;
 StackType_t tkCtl_Buffer [tkCtl_STACK_SIZE];
@@ -135,12 +137,16 @@ StackType_t tkSys_Buffer [tkSys_STACK_SIZE];
 StaticTask_t tkWANRX_Buffer_Ptr;
 StackType_t tkWANRX_Buffer [tkWANRX_STACK_SIZE];
 
-TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkWANRX;
+StaticTask_t tkWAN_Buffer_Ptr;
+StackType_t tkWAN_Buffer [tkWAN_STACK_SIZE];
+
+TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkWANRX, xHandle_tkWAN;
 
 void tkCtl(void * pvParameters);
 void tkCmd(void * pvParameters);
 void tkSys(void * pvParameters);
 void tkWanRX(void * pvParameters);
+void tkWan(void * pvParameters);
 
 bool starting_flag;
 
@@ -169,18 +175,25 @@ bool u_poll_data(dataRcd_s *dataRcd);
 void u_xprint_dr(dataRcd_s *dr);
 void u_print_tasks_running(void);
 
+bool WAN_process_data_rcd( dataRcd_s *dataRcd);
+void WAN_print_configuration(void);
+void WAN_config_debug(bool debug );
+bool WAN_read_debug(void);
+
+// Mensajes entre tareas
+#define SIGNAL_FRAME_READY		0x01
+
 //------------------------------------------------------------------------------
 // Task running & watchdogs
-#define NRO_TASKS  3
+#define NRO_TASKS  4
 
-typedef enum { TK_CMD = 0, TK_SYS, TK_WANRX } t_wdg_ids;
+typedef enum { TK_CMD = 0, TK_SYS, TK_WANRX, TK_WAN } t_wdg_ids;
 
 void u_kick_wdt( t_wdg_ids wdg_id, uint16_t wdg_timer);
 
+
 bool tk_running[NRO_TASKS];
-
 int16_t tk_watchdog[NRO_TASKS];
-
 uint8_t wdg_resetCause;
 
 

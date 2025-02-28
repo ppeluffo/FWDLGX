@@ -285,6 +285,7 @@ uint8_t i;
     xHandle_tkCmd = xTaskCreateStatic( tkCmd, "CMD", tkCmd_STACK_SIZE, (void *)1, tkCmd_TASK_PRIORITY, tkCmd_Buffer, &tkCmd_Buffer_Ptr );
     xHandle_tkSys = xTaskCreateStatic( tkSys, "SYS", tkSys_STACK_SIZE, (void *)1, tkSys_TASK_PRIORITY, tkSys_Buffer, &tkSys_Buffer_Ptr );
     xHandle_tkWANRX = xTaskCreateStatic( tkWanRX, "WANRX", tkWANRX_STACK_SIZE, (void *)1, tkWANRX_TASK_PRIORITY, tkWANRX_Buffer, &tkWANRX_Buffer_Ptr );
+    xHandle_tkWAN = xTaskCreateStatic( tkWan, "WAN", tkWAN_STACK_SIZE, (void *)1, tkWAN_TASK_PRIORITY, tkWAN_Buffer, &tkWAN_Buffer_Ptr );
 
     /* Arranco el RTOS. */
 	vTaskStartScheduler();

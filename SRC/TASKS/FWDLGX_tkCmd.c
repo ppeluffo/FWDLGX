@@ -115,7 +115,6 @@ uint8_t c = 0;
         }                     
     }      
 }
-
 //------------------------------------------------------------------------------
 static void cmd_TimerCallback( TimerHandle_t xTimer )
 {
@@ -155,7 +154,7 @@ static void cmdHelpFunction(void)
 		xprintf_P( PSTR("-config:\r\n"));
         xprintf_P( PSTR("  default {SPY,OSE}, save, load\r\n"));
         xprintf_P( PSTR("  modocomando\r\n"));
-        xprintf_P( PSTR("  debug {none,ainput,counter} {true/false}\r\n"));
+        xprintf_P( PSTR("  debug {none,ainput,counter,wan} {true/false}\r\n"));
         xprintf_P( PSTR("  ainput {0..%d} enable{true/false} aname imin imax mmin mmax offset\r\n"),( NRO_ANALOG_CHANNELS - 1 ) );
         xprintf_P( PSTR("  counter enable{true/false} cname magPP modo(PULSO/CAUDAL)\r\n") );
         xprintf_P( PSTR("  dlgid\r\n"));
@@ -231,9 +230,15 @@ static void cmdResetFunction(void)
         }
 
         if ( xHandle_tkWANRX != NULL ) {
-            vTaskSuspend( xHandle_tkSys );
+            vTaskSuspend( xHandle_tkWANRX );
             xHandle_tkWANRX = NULL;
             tk_running[TK_WANRX] = false;
+        }
+        
+        if ( xHandle_tkWAN != NULL ) {
+            vTaskSuspend( xHandle_tkWAN );
+            xHandle_tkWAN = NULL;
+            tk_running[TK_WAN] = false;
         }
         
         if ( !strcmp_P( strupr(argv[2]), PSTR("SOFT"))) {
@@ -413,6 +418,7 @@ fat_s l_fat;
 
     u_print_tasks_running();
     
+    WAN_print_configuration();
     modem_print_configuration();
     base_print_configuration();
     ainputs_print_configuration();
@@ -452,11 +458,21 @@ static void cmdTestFunction(void)
             return;
         }
         
-    if (!strcmp_P( strupr(argv[2]), PSTR("WANRX"))  ) {
+        if (!strcmp_P( strupr(argv[2]), PSTR("WANRX"))  ) {
             if ( xHandle_tkWANRX != NULL ) {
                 vTaskSuspend( xHandle_tkWANRX );
                 xHandle_tkWANRX = NULL;
                 tk_running[TK_WANRX] = false;
+            }
+            pv_snprintfP_OK();
+            return;
+        }
+
+        if (!strcmp_P( strupr(argv[2]), PSTR("WAN"))  ) {
+            if ( xHandle_tkWAN != NULL ) {
+                vTaskSuspend( xHandle_tkWAN );
+                xHandle_tkWAN = NULL;
+                tk_running[TK_WAN] = false;
             }
             pv_snprintfP_OK();
             return;

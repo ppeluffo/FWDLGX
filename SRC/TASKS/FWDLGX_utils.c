@@ -146,6 +146,17 @@ bool u_config_debug( char *tipo, char *valor)
             return(true);
         }
     }
+    
+    if (!strcmp_P( strupr(tipo), PSTR("WAN")) ) {
+        if (!strcmp_P( strupr(valor), PSTR("TRUE")) ) {
+            WAN_config_debug(true);
+            return(true);
+        }
+        if (!strcmp_P( strupr(valor), PSTR("FALSE")) ) {
+            WAN_config_debug(false);
+            return(true);
+        }
+    }
 
     return(false);
     
@@ -367,6 +378,10 @@ void u_print_tasks_running(void)
 
     if ( tk_running[TK_WANRX] ) {
         xprintf_P(PSTR(" wanrx[%d]"), tk_watchdog[TK_WANRX]);
+    }
+
+    if ( tk_running[TK_WAN] ) {
+        xprintf_P(PSTR(" wan[%d]"), tk_watchdog[TK_WAN]);
     }
     
     xprintf_P(PSTR("\r\n"));

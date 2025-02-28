@@ -55,7 +55,7 @@ bool base_config_dlgid ( char *s_dlgid );
 bool base_config_pwrmodo ( char *s_pwrmodo );
 bool base_config_pwron ( char *s_pwron );
 bool base_config_pwroff ( char *s_pwroff );
-uint8_t bases_hash(void);
+uint8_t base_hash(void);
 
 int16_t base_save_config_in_NVM(uint16_t nvm_ptr);
 int16_t base_load_config_from_NVM( uint16_t nvm_address);

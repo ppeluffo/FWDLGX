@@ -856,7 +856,20 @@ bool modem_test(char **argv)
 {
     
 bool retS = false;
-    
+char *p = NULL;
+
+    if (!strcmp_P( strupr(argv[2]), PSTR("READ"))  ) {
+        p = MODEM_get_buffer_ptr(); 
+        xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+        retS = true;
+        goto exit;  
+    }
+
+    if (!strcmp_P( strupr(argv[2]), PSTR("CLEAR"))  ) {
+        MODEM_flush_rx_buffer();
+        retS = true;
+        goto exit;  
+    }
 
     if (!strcmp_P( strupr(argv[2]), PSTR("APN"))  ) {
         modem_atcmd_read_apn(true);

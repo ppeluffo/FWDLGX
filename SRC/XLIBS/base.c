@@ -184,3 +184,54 @@ uint8_t rd_cks, calc_cks;
     return( nvm_address + sizeof(base_conf) );
 }
 //------------------------------------------------------------------------------
+uint8_t base_hash( void )
+{
+
+uint8_t hash = 0;
+char *p;
+uint8_t l_hash_buffer[64];
+
+    // Calculo el hash de la configuracion base
+    memset( l_hash_buffer, '\0', sizeof(l_hash_buffer));
+    sprintf_P( (char *)l_hash_buffer, PSTR("[TIMERPOLL:%03d]"), base_conf.timerpoll );
+    p = (char *)l_hash_buffer;
+    while (*p != '\0') {
+		hash = u_hash(hash, *p++);
+	}
+    //xprintf_P(PSTR("HASH_BASE:<%s>, hash=%d\r\n"),hash_buffer, hash );
+    //
+    memset(l_hash_buffer, '\0',sizeof(l_hash_buffer) );
+    sprintf_P( (char *)l_hash_buffer, PSTR("[TIMERDIAL:%03d]"), base_conf.timerdial );
+    p = (char *)l_hash_buffer;
+    while (*p != '\0') {
+		hash = u_hash(hash, *p++);
+	}
+    //xprintf_P(PSTR("HASH_BASE:<%s>, hash=%d\r\n"),hash_buffer, hash );    
+    //
+    memset(l_hash_buffer, '\0', sizeof(l_hash_buffer));
+    sprintf_P( (char *)l_hash_buffer, PSTR("[PWRMODO:%d]"), base_conf.pwr_modo );
+    p = (char *)l_hash_buffer;
+    while (*p != '\0') {
+		hash = u_hash(hash, *p++);
+	}
+    //xprintf_P(PSTR("HASH_BASE:<%s>, hash=%d\r\n"),hash_buffer, hash );
+    //
+    memset(l_hash_buffer, '\0', sizeof(l_hash_buffer));
+    sprintf_P( (char *)l_hash_buffer, PSTR("[PWRON:%04d]"), base_conf.pwr_hhmm_on );
+    p = (char *)l_hash_buffer;
+    while (*p != '\0') {
+		hash = u_hash(hash, *p++);
+	}
+    //xprintf_P(PSTR("HASH_BASE:<%s>, hash=%d\r\n"),hash_buffer, hash );
+    //
+    memset(l_hash_buffer, '\0', sizeof(l_hash_buffer) );
+    sprintf_P( (char *)l_hash_buffer, PSTR("[PWROFF:%04d]"), base_conf.pwr_hhmm_off );
+    p = (char *)l_hash_buffer;
+    while (*p != '\0') {
+		hash = u_hash(hash, *p++);
+	}
+    //xprintf_P(PSTR("HASH_BASE:<%s>, hash=%d\r\n"),hash_buffer, hash );
+    //  
+    return(hash);
+}
+//------------------------------------------------------------------------------
