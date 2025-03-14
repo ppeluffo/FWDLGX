@@ -38,6 +38,7 @@ typedef enum {
     
 	fdTERM = 0,
     fdWAN,
+    fdRS485A,
     fdI2C,
     fdNVM
             
@@ -118,11 +119,11 @@ StaticSemaphore_t NVM_xMutexBuffer;
 #define USART_IsTXDataRegisterEmpty(_usart) (((_usart)->STATUS & USART_DREIF_bm) != 0)
 #define USART_IsTXShiftRegisterEmpty(_usart) (((_usart)->STATUS & USART_TXCIF_bm) != 0)
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     #define USART_PutChar(_usart, _data) ((_usart)->TXDATAL = _data)
 #endif
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     #define USART_PutChar(_usart, _data) ((_usart)->DATA = _data)
 #endif
 

@@ -15,7 +15,28 @@ extern "C" {
 #include <avr/io.h>
 #include "stdbool.h"
     
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
+
+    // RS485_RTS
+#ifdef R1
+    #define RTS_RS485_PORT         PORTC    
+    #define RTS_RS485              2
+    #define RTS_RS485_PIN_bm       PIN2_bm
+    #define RTS_RS485_PIN_bp       PIN2_bp    
+#endif
+    
+#ifdef R2
+    #define RTS_RS485_PORT         PORTD    
+    #define RTS_RS485              7
+    #define RTS_RS485_PIN_bm       PIN7_bm
+    #define RTS_RS485_PIN_bp       PIN7_bp
+#endif
+
+    // EN_PWR_QMBUS (output)
+    #define EN_PWR_QMBUS_PORT         PORTF
+    #define EN_PWR_QMBUS              1
+    #define EN_PWR_QMBUS_PIN_bm       PIN1_bm
+    #define EN_PWR_QMBUS_PIN_bp       PIN1_bp
 
     // PWR_SENSORS (sensors de 4-20, output)
     #define PWR_SENSORS_PORT         PORTC
@@ -37,7 +58,7 @@ extern "C" {
     
 #endif
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
 
     // TWI PE0(SDA)/PE1(SCL)
     #define SCL_PORT        PORTE
@@ -51,6 +72,14 @@ extern "C" {
     #define PWR_SENSORS_PIN_bp       PIN1_bp
 
 #endif
+
+void SET_EN_PWR_QMBUS(void);
+void CLEAR_EN_PWR_QMBUS(void);
+void CONFIG_EN_PWR_QMBUS(void);
+
+void SET_RTS_RS485(void);
+void CLEAR_RTS_RS485(void);
+void CONFIG_RTS_485(void);
 
 void CONFIG_SCL(void);
 void SET_SCL(void);

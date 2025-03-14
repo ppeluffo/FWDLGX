@@ -2,13 +2,13 @@
 
 #include "led.h"
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     #define LED_PORT	PORTC
     #define LED_PIN_bm	PIN4_bm
     #define LED_PIN_bp  PIN4_bp
 #endif
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     #define LED_PORT	PORTF
     #define LED_PIN_bm	PIN7_bm
     #define LED_PIN_bp  PIN7_bp

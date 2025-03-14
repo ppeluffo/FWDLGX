@@ -29,6 +29,8 @@ uint32_t ulNotificationValue;
      
     xprintf_P(PSTR("Starting tkWanRX..\r\n" ));
   
+    u_kick_wdt(TK_WANRX, T120S);
+    
 	// loop
 	for( ;; )
 	{
@@ -37,7 +39,7 @@ uint32_t ulNotificationValue;
             c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
             // el read se bloquea 50ms. lo que genera la espera.
             
-            u_kick_wdt(TK_WANRX, 120);
+            u_kick_wdt(TK_WANRX, T120S);
             
             while ( xfgetc( fdWAN, (char *)&c ) == 1 ) {
                 // Si hay datos recividos, los encolo
@@ -49,7 +51,7 @@ uint32_t ulNotificationValue;
         }
         
         // Estoy en tickless
-        u_kick_wdt(TK_WANRX, 120);
+        u_kick_wdt(TK_WANRX, T120S);
         ulNotificationValue = ulTaskNotifyTake(pdTRUE, ( TickType_t)(60000 / portTICK_PERIOD_MS ));
 	}    
 }

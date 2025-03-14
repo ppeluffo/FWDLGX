@@ -65,7 +65,7 @@ void MODEM_apagar(void)
     
 }
 //--------------------------------------------------------------------------
-int MODEM_txmit(char *tx_buffer[])
+int MODEM_txmit(char *tx_buffer)
 {
     int i;
     
@@ -700,7 +700,7 @@ bool modem_check_and_reconfig(bool verbose)
      */
     
 char *p;
-char param_str[30];
+char param_str[48];
 bool modem_in_default = false;
 bool save_dlg_config = false;
 

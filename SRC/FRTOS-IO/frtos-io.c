@@ -20,7 +20,7 @@ int16_t xRet = -1;
 
 	switch(fd) {
    
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
         
 	case fdTERM:
         frtos_open_uart(&USART0, flags);
@@ -29,6 +29,17 @@ int16_t xRet = -1;
         
     case fdWAN:
         frtos_open_uart(&USART3, flags);
+        xRet=0;
+		break;
+        
+    case fdRS485A:
+#ifdef R2
+        frtos_open_uart(&USART4, flags);
+#endif
+
+#ifdef R1
+        frtos_open_uart(&USART1, flags);
+#endif        
         xRet=0;
 		break;
         
@@ -42,7 +53,9 @@ int16_t xRet = -1;
         
 #endif
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
+
+        
         
 	case fdTERM:
         drv_uart2_init(flags);
@@ -78,7 +91,7 @@ int16_t xRet = -1;
 
 	switch(fd) {
    
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
         
         case fdTERM:
             xRet = frtos_ioctl_uart0( ulRequest, pvValue );
@@ -86,6 +99,16 @@ int16_t xRet = -1;
  
         case fdWAN:
             xRet = frtos_ioctl_uart3( ulRequest, pvValue );
+            break;
+            
+        case fdRS485A:
+#ifdef R2
+            xRet = frtos_ioctl_uart4( ulRequest, pvValue );
+#endif
+
+#ifdef R1
+            xRet = frtos_ioctl_uart1( ulRequest, pvValue );
+#endif            
             break;
             
         case fdI2C:
@@ -98,7 +121,7 @@ int16_t xRet = -1;
             
 #endif 
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
             
         case fdTERM:
             xRet = frtos_ioctl_uart2( ulRequest, pvValue );
@@ -131,7 +154,7 @@ int16_t xRet = -1;
 
 	switch(fd) {
   
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
         
 	case fdTERM:
 		xRet = frtos_write_uart0( pvBuffer, xBytes );
@@ -139,6 +162,16 @@ int16_t xRet = -1;
  
     case fdWAN:
 		xRet = frtos_write_uart3( pvBuffer, xBytes );
+		break;
+
+    case fdRS485A:
+#ifdef R2
+		xRet = frtos_write_uart4_rs485( pvBuffer, xBytes );
+#endif
+
+#ifdef R1
+		xRet = frtos_write_uart1_rs485( pvBuffer, xBytes );
+#endif        
 		break;
         
     case fdI2C:
@@ -151,7 +184,7 @@ int16_t xRet = -1;
         
 #endif
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
         
 	case fdTERM:
 		xRet = frtos_write_uart2( pvBuffer, xBytes );
@@ -185,7 +218,7 @@ int16_t xRet = -1;
 
 	switch(fd) {
   
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
        
 	case fdTERM:
 		xRet = frtos_read_uart0( pvBuffer, xBytes );
@@ -193,6 +226,16 @@ int16_t xRet = -1;
  
     case fdWAN:
 		xRet = frtos_read_uart3( pvBuffer, xBytes );
+		break;
+
+    case fdRS485A:
+#ifdef R2
+		xRet = frtos_read_uart4( pvBuffer, xBytes );
+#endif
+
+#ifdef R1
+		xRet = frtos_read_uart1( pvBuffer, xBytes );
+#endif        
 		break;
         
     case fdI2C:
@@ -205,7 +248,7 @@ int16_t xRet = -1;
         
 #endif
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
        
 	case fdTERM:
 		xRet = frtos_read_uart2( pvBuffer, xBytes );
@@ -239,7 +282,7 @@ int16_t xRet = -1;
 void frtos_open_uart( volatile USART_t *uart, uint32_t baudrate)
 {
   
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
     if (uart == &USART0 ) {
         drv_uart0_init(baudrate);
@@ -259,7 +302,7 @@ void frtos_open_uart( volatile USART_t *uart, uint32_t baudrate)
 
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     // Se inician en frtos_open
 #endif
     
@@ -269,7 +312,7 @@ int16_t frtos_write_uart0( const char *pvBuffer, const uint16_t xBytes )
 {
 
     
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
 uint16_t i;
 
@@ -298,7 +341,7 @@ int16_t frtos_write_uart1( const char *pvBuffer, const uint16_t xBytes )
     
 uint16_t i;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
@@ -317,7 +360,7 @@ uint16_t i;
 
 #endif
   
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     
     for( i = 0; i < xBytes; i++) {
         while(! USART_IsTXDataRegisterEmpty(&USARTE0) )
@@ -330,13 +373,51 @@ uint16_t i;
     return(xBytes);   
 }
 //------------------------------------------------------------------------------
+int16_t frtos_write_uart1_rs485( const char *pvBuffer, const uint16_t xBytes )
+{
+    
+uint16_t i;
+ 
+#ifdef HW_AVRDA
+
+    // RTS ON. Habilita el sentido de trasmision del chip.
+	SET_RTS_RS485();
+	vTaskDelay( ( TickType_t)( 5 ) );
+    
+    // Transmision x poleo ( No hablito al INT x DRIE )
+    for( i = 0; i < xBytes; i++) {
+        // Espero que el TXDATA reg. este vacio.
+        while( (USART1.STATUS & USART_DREIF_bm) == 0 )
+            ;
+        USART_PutChar(&USART1, pvBuffer[i]);
+    }
+    
+    // Espero que salga el ultimo byte
+    while( ( USART1.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART1.STATUS |= ( 1 << USART_TXCIF_bp);
+    
+    // Para evitar el loopback del puerto RS485
+    frtos_ioctl( fdRS485A, ioctl_UART_CLEAR_RX_BUFFER, NULL );
+    vTaskDelay( ( TickType_t)( 2 ) );
+    
+	// RTS OFF: Habilita la recepcion del chip
+	CLEAR_RTS_RS485();
+
+#endif
+    
+    vTaskDelay( ( TickType_t)( 1 ) );
+    return(xBytes);   
+}
+//------------------------------------------------------------------------------
 int16_t frtos_write_uart2( const char *pvBuffer, const uint16_t xBytes )
 {
 
   
 uint16_t i;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
@@ -355,7 +436,7 @@ uint16_t i;
  
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     
     for( i = 0; i < xBytes; i++) {
         while(! USART_IsTXDataRegisterEmpty(&USARTF0) )
@@ -371,7 +452,7 @@ uint16_t i;
 int16_t frtos_write_uart3( const char *pvBuffer, const uint16_t xBytes )
 {
    
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
 uint16_t i;
 
@@ -399,7 +480,7 @@ int16_t frtos_write_uart4( const char *pvBuffer, const uint16_t xBytes )
     
 uint16_t i;
  
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
@@ -413,6 +494,44 @@ uint16_t i;
             ;
     // Borro la flag
     USART4.STATUS |= ( 1 << USART_TXCIF_bp);
+
+#endif
+    
+    vTaskDelay( ( TickType_t)( 1 ) );
+    return(xBytes);   
+}
+//------------------------------------------------------------------------------
+int16_t frtos_write_uart4_rs485( const char *pvBuffer, const uint16_t xBytes )
+{
+    
+uint16_t i;
+    
+#ifdef HW_AVRDA
+
+    // RTS ON. Habilita el sentido de trasmision del chip.
+	SET_RTS_RS485();
+	vTaskDelay( ( TickType_t)( 5 ) );
+    
+    // Transmision x poleo ( No hablito al INT x DRIE )
+    for( i = 0; i < xBytes; i++) {
+        // Espero que el TXDATA reg. este vacio.
+        while( (USART4.STATUS & USART_DREIF_bm) == 0 )
+            ;
+        USART_PutChar(&USART4, pvBuffer[i]);
+    }
+    
+    // Espero que salga el ultimo byte
+    while( ( USART4.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART4.STATUS |= ( 1 << USART_TXCIF_bp);
+    
+    // Para evitar el loopback del puerto RS485
+    frtos_ioctl( fdRS485A, ioctl_UART_CLEAR_RX_BUFFER, NULL );
+    vTaskDelay( ( TickType_t)( 2 ) );
+    
+	// RTS OFF: Habilita la recepcion del chip
+	CLEAR_RTS_RS485();
 
 #endif
     
@@ -765,12 +884,12 @@ int16_t frtos_open_i2c( volatile TWI_t *twi, periferico_i2c_port_t *xI2c, file_d
 	xI2c->xBlockTime = (10 / portTICK_PERIOD_MS );
 	xI2c->i2c_error_code = I2C_OK;
 	//
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 	// Abro e inicializo el puerto I2C solo la primera vez que soy invocado
 	drv_I2C_init(twi, false);
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     drv_I2C_init(NULL, false);
 #endif
     
@@ -922,13 +1041,13 @@ int16_t frtos_read_nvm( periferico_nvm_t *xNVM, char *pvBuffer, const uint16_t x
 
 int16_t xReturn = xBytes;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
     FLASH_0_read_eeprom_block( xNVM->eeAddress, (uint8_t *)pvBuffer, xBytes );
  
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     
     switch( xNVM->nvm_operation) {
         case NVM_READ_SERIAL:
@@ -949,7 +1068,7 @@ int16_t xReturn = xBytes;
 int16_t frtos_write_nvm( periferico_nvm_t *xNVM, const char *pvBuffer, const uint16_t xBytes )
 {
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 nvmctrl_status_t nvm_status;
 
@@ -962,7 +1081,7 @@ nvmctrl_status_t nvm_status;
     
 #endif
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     
     // Esta funcion es void !!!
     nvm_eeprom_erase_and_write_buffer( xNVM->eeAddress, (uint8_t *)pvBuffer, xBytes);

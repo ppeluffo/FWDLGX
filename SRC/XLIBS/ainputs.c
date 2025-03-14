@@ -395,7 +395,7 @@ char res[3] = { '\0','\0', '\0' };
 int8_t xBytes = 0;
 //float vshunt;
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
 
 	switch ( ch ) {
 	case 0:
@@ -425,7 +425,7 @@ int8_t xBytes = 0;
 
 #endif
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 	switch ( ch ) {
 	case 0:
 		ina_reg = INA3221_CH3_SHV;

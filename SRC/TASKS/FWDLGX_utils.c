@@ -24,6 +24,11 @@ void system_init(void)
     XPRINTF_init();
     MODEM_init();
     
+    CONFIG_RTS_485();
+    // RTS OFF: Habilita la recepcion del chip
+	CLEAR_RTS_RS485();
+    CONFIG_EN_PWR_QMBUS();
+    
     ADC_init();
     
     CONFIG_EN_SENS3V3();
@@ -39,7 +44,7 @@ int8_t WDT_init(void)
 {
 	/* 8K cycles (8.2s) */
 	/* Off */
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 	ccp_write_io((void *)&(WDT.CTRLA), WDT_PERIOD_8KCLK_gc | WDT_WINDOW_OFF_gc );  
     
 #endif
@@ -51,7 +56,7 @@ int8_t CLKCTRL_init(void)
 {
 	// Configuro el clock para 24Mhz
 	
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ccp_write_io((void *)&(CLKCTRL.OSCHFCTRLA), CLKCTRL_FRQSEL_24M_gc         /* 24 */
                                                 
@@ -65,7 +70,7 @@ int8_t CLKCTRL_init(void)
 
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     
 #if SYSMAINCLK == 32
 	// Habilito el oscilador de 32Mhz
@@ -95,11 +100,11 @@ void reset(void)
     vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
 	/* Issue a Software Reset to initilize the CPU */
     
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 	ccp_write_io( (void *)&(RSTCTRL.SWRR), RSTCTRL_SWRST_bm ); 
 #endif
     
-#ifdef MODEL_M1 
+#ifdef HW_XMEGA 
 	CCPWrite( &RST.CTRL, RST_SWRST_bm );
 #endif
     
@@ -158,6 +163,17 @@ bool u_config_debug( char *tipo, char *valor)
         }
     }
 
+    if (!strcmp_P( strupr(tipo), PSTR("MODBUS")) ) {
+        if (!strcmp_P( strupr(valor), PSTR("TRUE")) ) {
+            modbus_config_debug(true);
+            return(true);
+        }
+        if (!strcmp_P( strupr(valor), PSTR("FALSE")) ) {
+            modbus_config_debug(false);
+            return(true);
+        }
+    }
+    
     return(false);
     
 }
@@ -172,6 +188,7 @@ void u_config_default( char *modo )
     ainputs_config_defaults();
     counter_config_defaults();
     modem_config_defaults(modo);
+    modbus_config_defaults();
     
 }
 //------------------------------------------------------------------------------
@@ -202,6 +219,12 @@ int16_t nvm_ptr;
 
     // MODEM
     nvm_ptr = modem_save_config_in_NVM(nvm_ptr);
+    if (nvm_ptr == -1) {
+        return(false);
+    }
+
+    // MODBUS
+    nvm_ptr = modbus_save_config_in_NVM(nvm_ptr);
     if (nvm_ptr == -1) {
         return(false);
     }
@@ -247,6 +270,12 @@ int16_t nvm_ptr;
     if ( nvm_ptr == -1 ) {
         return(false);
     }
+
+    // MODBUS
+    nvm_ptr = modbus_load_config_from_NVM(nvm_ptr);
+    if ( nvm_ptr == -1 ) {
+        return(false);
+    }
     
     return(true);
 }
@@ -263,6 +292,9 @@ float mag;
 uint16_t raw;
 bool retS = false;
 counter_value_t cnt;
+    
+    // Siempre prendo: si esta prendido no importa, no hace nada
+    SET_EN_PWR_QMBUS();
     
     // AINPUTS
     ainputs_prender_sensores();  
@@ -288,7 +320,27 @@ counter_value_t cnt;
         }
     }
     counter_clear();
+    
+#ifdef HW_AVRDA
+    // MODBUS
+    if ( modbus_conf.enabled ) { 
         
+        rs485_ENTER_CRITICAL();
+        rs485_AWAKE();
+        
+        modbus_read ( dataRcd->modbus );  
+        // Solo apago si estoy en modo discreto
+        if ( u_get_sleep_time(false) > 0 ){
+            // Espero 10s que se apliquen las consignas y apago el modulo
+            vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+            CLEAR_EN_PWR_QMBUS(); 
+        }
+        
+        rs485_SLEEP();
+        rs485_EXIT_CRITICAL();
+    }
+#endif
+    
     // Bateria
     dataRcd->bt3v3 = u_read_bat3v3(false);
     dataRcd->bt12v = u_read_bat12v(false);
@@ -347,16 +399,17 @@ uint8_t i;
         }            
     }
     
-      
-    // Canales Modbus:
-/*    if ( systemConf.ptr_modbus_conf->enabled ) { 
+#ifdef HW_AVRDA
+    // Modbus:
+    if ( modbus_conf.enabled ) { 
         for ( i=0; i < NRO_MODBUS_CHANNELS; i++) {
-            if ( systemConf.ptr_modbus_conf->mbch[i].enabled ) {
-                xprintf_P( PSTR("%s=%0.2f;"), systemConf.ptr_modbus_conf->mbch[i].name, dr->modbus[i]);
+            if ( modbus_conf.mbch[i].enabled ) {
+                xprintf_P( PSTR("%s=%0.2f;"), modbus_conf.mbch[i].name, dr->modbus[i]);
             }
         }
     }
-*/    
+#endif
+    
     // Bateria
     xprintf_P( PSTR("bt3v3=%0.2f;bt12v=%0.2f"), dr->bt3v3, dr->bt12v);
     
@@ -383,6 +436,11 @@ void u_print_tasks_running(void)
     if ( tk_running[TK_WAN] ) {
         xprintf_P(PSTR(" wan[%d]"), tk_watchdog[TK_WAN]);
     }
+
+    if ( tk_running[TK_RS485RX] ) {
+        xprintf_P(PSTR(" rs485rx[%d]"), tk_watchdog[TK_RS485RX]);
+    }
+
     
     xprintf_P(PSTR("\r\n"));
     

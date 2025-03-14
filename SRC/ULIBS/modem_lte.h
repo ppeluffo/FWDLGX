@@ -24,7 +24,7 @@ extern "C" {
 //--------------------------------------------------------------------------
 // PUSR WH-LTE-7S1
     
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     // LTE_PWR
     #define LTE_PWR_PORT         PORTB
     #define LTE_PWR              4
@@ -74,7 +74,7 @@ extern "C" {
 #endif
     
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     // LTE_PWR (GPRS_SW)
     #define LTE_PWR_PORT         PORTD
     #define LTE_PWR              5
@@ -150,7 +150,7 @@ bool modem_awake;
 void MODEM_init(void);
 void MODEM_prender(void);
 void MODEM_apagar(void);
-int MODEM_txmit( char *tx_buffer[] );
+int MODEM_txmit( char *tx_buffer );
 char *MODEM_get_buffer_ptr(void);
 void MODEM_flush_rx_buffer(void);
 bool MODEM_enter_mode_at(bool verbose);

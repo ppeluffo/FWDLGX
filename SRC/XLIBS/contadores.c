@@ -3,9 +3,9 @@
 #include <avr/interrupt.h>
 
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
-#ifdef CNTE
+#ifdef R2
 
     #define PE6_INTERRUPT               ( PORTE.INTFLAGS & PIN6_bm )
     #define PE6_CLEAR_INTERRUPT_FLAG    ( PORTE.INTFLAGS &= PIN6_bm )
@@ -18,7 +18,7 @@
 
 #endif
 
-#ifdef CNTF
+#ifdef R1
 
     #define PF4_INTERRUPT               ( PORTF.INTFLAGS & PIN4_bm )
     #define PF4_CLEAR_INTERRUPT_FLAG    ( PORTF.INTFLAGS &= PIN4_bm )
@@ -34,7 +34,7 @@
 #endif
 
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
 // Los contadores en M1 son PB2 y PA2. Solo usamos uno, el PORT_A
 
     #define CNT0_PORT	PORTA
@@ -340,9 +340,9 @@ uint8_t rd_cks, calc_cks;
  * This violates the Single Responsibility principle in software design 
  * and extreme care must be taken to avoid bugs.
  */
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
-#ifdef CNTE
+#ifdef R2
 ISR(PORTE_PORT_vect)
 {
     // Borro las flags.
@@ -358,7 +358,7 @@ ISR(PORTE_PORT_vect)
 }
 #endif
 
-#ifdef CNTF
+#ifdef R1
 ISR(PORTF_PORT_vect)
 {
     // Borro las flags.
@@ -376,7 +376,7 @@ ISR(PORTF_PORT_vect)
 
 #endif
 //------------------------------------------------------------------------------
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
 
 ISR ( PORTA_INT0_vect )
 {

@@ -70,7 +70,7 @@ float u_read_bat3v3(bool debug)
 uint16_t adc = 0;
 float bat3v3 = 0.0;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     /*
      Leo el ADC con 64 muestras
      */
@@ -89,7 +89,7 @@ float bat3v3 = 0.0;
     
 #endif
  
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     // El model XMEGA no mide los 3V3. !!
     bat3v3 = -1.0;
  
@@ -127,7 +127,7 @@ float bat12v = 0.0;
     
 #endif
  
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     
     float mag;
     uint16_t raw;

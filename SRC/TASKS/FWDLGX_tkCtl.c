@@ -24,9 +24,8 @@ void tkCtl(void * pvParameters)
 ( void ) pvParameters;
 uint32_t ulNotificationValue;
 fat_s l_fat;
-uint8_t i;
 
-	vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
+    vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     xprintf_P(PSTR("Starting tkCtl..\r\n"));
     
     // Inicializaciones con el RTOS corriendo
@@ -111,6 +110,7 @@ uint8_t i;
             // Si el wdg llego a 0 es que no pudo borrarlo  !!!
             if ( tk_watchdog[i] <= 0 ) {        
                 xprintf_P( PSTR("ALARM !!!. TKCTL: RESET BY WDG %d\r\n"), i );
+                vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
                 //reset();
                 
                 while(1)

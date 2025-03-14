@@ -11,7 +11,7 @@ char nvm_str_buffer[38];
 
 nvm_device_serial_id_t avr_id;
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     struct nvm_device_serial xmega_serial;
     struct nvm_device_id xmega_id;
 #endif
@@ -28,11 +28,11 @@ uint8_t fptr = 0;
     memset(nvm_str_buffer, '\0', sizeof(nvm_str_buffer));
     NVM_ID_read( &avr_id );
     
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     fptr += sprintf_P( (char *)&nvm_str_buffer[fptr], PSTR("0x%02x%02x%02x"), avr_id.devid0, avr_id.devid1, avr_id.devid2);  
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     fptr += sprintf_P( (char *)&nvm_str_buffer[fptr], PSTR("0x%02x%02x%02x"), xmega_id.devid0, xmega_id.devid1, xmega_id.devid2);  
 #endif
     
@@ -50,7 +50,7 @@ uint8_t fptr = 0;
     memset(nvm_str_buffer, '\0', sizeof(nvm_str_buffer));
     NVM_ID_read( &avr_id );  
     
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     fptr = 0;
     fptr += sprintf_P( (char *)&nvm_str_buffer[fptr], PSTR("%02x%02x%02x%02x"), avr_id.sernum0, avr_id.sernum1, avr_id.sernum2, avr_id.sernum3);
     fptr += sprintf_P( (char *)&nvm_str_buffer[fptr], PSTR("%02x%02x%02x%02x"), avr_id.sernum4, avr_id.sernum5, avr_id.sernum6, avr_id.sernum7);
@@ -58,7 +58,7 @@ uint8_t fptr = 0;
     fptr += sprintf_P( (char *)&nvm_str_buffer[fptr], PSTR("%02x%02x%02x%02x"), avr_id.sernum12, avr_id.sernum13, avr_id.sernum14, avr_id.sernum15);
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     fptr = 0;
     fptr += sprintf_P( (char *)&nvm_str_buffer[fptr], PSTR("%02x%02x%02x%02x"), xmega_serial.lotnum0,xmega_serial.lotnum1,xmega_serial.lotnum2,xmega_serial.lotnum3);
     fptr += sprintf_P( (char *)&nvm_str_buffer[fptr], PSTR("%02x%02x%02x%02x"), xmega_serial.lotnum4,xmega_serial.lotnum5,xmega_serial.wafnum,xmega_serial.coordx0);
@@ -73,7 +73,7 @@ void NVM_ID_read( nvm_device_serial_id_t *avr_id )
 	// El signature lo leo una sola vez.
 	// Luego, como lo tengo en la memoria, no lo leo mas.
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
     avr_id->devid0 = SIGROW.DEVICEID0;
     avr_id->devid1 = SIGROW.DEVICEID1;
@@ -98,7 +98,7 @@ void NVM_ID_read( nvm_device_serial_id_t *avr_id )
    
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     
 uint16_t op_code;
 

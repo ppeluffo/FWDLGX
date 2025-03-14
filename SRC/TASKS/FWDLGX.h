@@ -78,36 +78,46 @@ extern "C" {
 #include "ainputs.h"
 #include "contadores.h"
 #include "modem_lte.h"
+#include "modbus.h"
+#include "rs485.h"
 
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
 
     #ifndef F_CPU
         #define F_CPU 32000000
     #endif
     
-    #define FW_TYPE "SPX_XMEGA"  
+    #define HW "SPX_XMEGA"  
     #define SYSMAINCLK 32
-    #define HW_MODELO "FWDLG M1 FWFRTOS R001 HW:AVR128DA64"
+    #define HW_MODELO "XMEGA256A3"
 
     #include "clksys_driver.h"
 
 #endif
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
 #include "protected_io.h"
     #ifndef F_CPU
         #define F_CPU 24000000
     #endif
-    
-    #define FW_TYPE "SPQ_AVRDA"  
+   
+    #ifdef R2
+        #define HW "SPQ_AVRDA_R2" 
+    #endif
+
+    #ifdef R1
+        #define HW "SPQ_AVRDA_R1" 
+    #endif
+
     #define SYSMAINCLK 24
-    #define HW_MODELO "FWDLG M3 FWFRTOS R001 HW:AVR128DA64"
+    #define HW_MODELO "AVR128DA64"
 
 #endif
-                
+      
+#define FW_TYPE "FWDLGX"
 #define FW_REV "1.0.0"
-#define FW_DATE "@ 20250228"
+#define FW_DATE "@ 20250314"
 #define FRTOS_VERSION "FW:FreeRTOS 202212.01"
 
 #define pdSECS_TO_TICKS(xTimeInSecs) ((TickType_t)(((uint32_t)(xTimeInSecs) * (uint32_t)configTICK_RATE_HZ) ))
@@ -118,12 +128,14 @@ extern "C" {
 #define tkSys_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
 #define tkWANRX_TASK_PRIORITY	( tskIDLE_PRIORITY + 1 )
 #define tkWAN_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
+#define tkRS485RX_TASK_PRIORITY ( tskIDLE_PRIORITY + 1 )
 
 #define tkCtl_STACK_SIZE		384
 #define tkCmd_STACK_SIZE		512
 #define tkSys_STACK_SIZE		512
 #define tkWANRX_STACK_SIZE      384
 #define tkWAN_STACK_SIZE		512
+#define tkRS485RX_STACK_SIZE	384
 
 StaticTask_t tkCtl_Buffer_Ptr;
 StackType_t tkCtl_Buffer [tkCtl_STACK_SIZE];
@@ -140,13 +152,17 @@ StackType_t tkWANRX_Buffer [tkWANRX_STACK_SIZE];
 StaticTask_t tkWAN_Buffer_Ptr;
 StackType_t tkWAN_Buffer [tkWAN_STACK_SIZE];
 
-TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkWANRX, xHandle_tkWAN;
+StaticTask_t tkRS485RX_Buffer_Ptr;
+StackType_t tkRS485RX_Buffer [tkRS485RX_STACK_SIZE];
+
+TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkWANRX, xHandle_tkWAN, xHandle_tkRS485RX;
 
 void tkCtl(void * pvParameters);
 void tkCmd(void * pvParameters);
 void tkSys(void * pvParameters);
 void tkWanRX(void * pvParameters);
 void tkWan(void * pvParameters);
+void tkRS485RX(void * pvParameters);
 
 bool starting_flag;
 
@@ -160,7 +176,7 @@ void reset(void);
 typedef struct {
     float ainputs[NRO_ANALOG_CHANNELS];
     float contador;
-    //float modbus[NRO_MODBUS_CHANNELS];
+    float modbus[NRO_MODBUS_CHANNELS];
     float bt3v3;
     float bt12v;
     RtcTimeType_t  rtc;	   
@@ -185,12 +201,15 @@ bool WAN_read_debug(void);
 
 //------------------------------------------------------------------------------
 // Task running & watchdogs
-#define NRO_TASKS  4
+#define NRO_TASKS  5
 
-typedef enum { TK_CMD = 0, TK_SYS, TK_WANRX, TK_WAN } t_wdg_ids;
+typedef enum { TK_CMD = 0, TK_SYS, TK_WANRX, TK_WAN, TK_RS485RX } t_wdg_ids;
 
 void u_kick_wdt( t_wdg_ids wdg_id, uint16_t wdg_timer);
 
+#define T60S    60
+#define T120S   120
+#define T300S   300
 
 bool tk_running[NRO_TASKS];
 int16_t tk_watchdog[NRO_TASKS];

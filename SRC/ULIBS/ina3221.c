@@ -37,11 +37,11 @@ bool ret = false;
     
     //xprintf_P(PSTR("DEBUG: INA_SLEEP\r\n"));
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     ret = INA_config(INA1, CONF_INA_SLEEP);
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     ret = INA_config(INA0, CONF_INA_SLEEP);
     if (ret) 
         ret = INA_config(INA1, CONF_INA_SLEEP);
@@ -57,11 +57,11 @@ bool ret = false;
  
      //xprintf_P(PSTR("DEBUG: INA_AWAKE\r\n"));
      
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     ret = INA_config(INA1, CONF_INA_AVG128);
 #endif
     
-#ifdef MODEL_M1
+#ifdef HW_XMEGA
     ret = INA_config(INA0, CONF_INA_AVG128);
     if (ret) 
         ret = INA_config(INA1, CONF_INA_AVG128);
@@ -99,7 +99,7 @@ char data[3] = { 0 };
 int16_t xBytes = 0;
 uint8_t ina_id = atoi(s_ina_id);
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     ina_id = 1;
 #endif
 
@@ -147,7 +147,7 @@ uint8_t ina_id = atoi(s_ina_id);
     //    return (-1);
     //}
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     ina_id = 1;
 #endif
             
@@ -204,7 +204,7 @@ int16_t rcode = 0;
         xprintf_P(PSTR("INA_read.\r\n"));
     }
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     ina_id = 1;
 #endif
     
@@ -235,7 +235,7 @@ int16_t rcode = 0;
         xprintf_P(PSTR("INA_write.\r\n"));
     }
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     ina_id = 1;
 #endif
         

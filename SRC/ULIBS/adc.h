@@ -45,12 +45,12 @@ uint8_t ADC_get_resolution();
 uint16_t ADC_read_sens3v3(void);
 uint16_t ADC_read_sens12v(void);
 
-#if defined MODEL_M2 || defined MODEL_M3
+#ifdef HW_AVRDA
     typedef ADC_MUXPOS_t adc_0_channel_t;
     typedef ADC_MUXNEG_t adc_0_muxneg_channel_t;
 #endif
 
-#if defined MODEL_M1
+#if defined HW_XMEGA
     typedef int16_t adc_0_channel_t;
     typedef int16_t adc_0_muxneg_channel_t;
 #endif    

@@ -14,16 +14,8 @@ static void cmdTestFunction(void);
 static void pv_snprintfP_OK(void );
 static void pv_snprintfP_ERR(void );
 
-StaticTimer_t cmd_xTimerBuffer;
-TimerHandle_t cmd_xTimer;
-static void cmd_TimerCallback( TimerHandle_t xTimer );
-
-#define T2MIN_INMS  ( 2 * 60000 )
-#define T60MIN_INMS ( 60 * 60000 )
-
-typedef enum { CMD_AWAKE=0, CMD_SLEEP } t_cmd_pwrmode;
-
-t_cmd_pwrmode cmd_state;
+bool modocomando;
+uint32_t awake_timer;
 
 //------------------------------------------------------------------------------
 void tkCmd(void * pvParameters)
@@ -33,7 +25,7 @@ void tkCmd(void * pvParameters)
 
 ( void ) pvParameters;
 uint8_t c = 0;
-    
+
     while ( ! starting_flag )
         vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
 
@@ -56,71 +48,38 @@ uint8_t c = 0;
     xprintf_P(PSTR("Starting tkCmd..\r\n" ));
     xprintf_P(PSTR("Spymovil %s %s %s %s \r\n") , HW_MODELO, FRTOS_VERSION, FW_REV, FW_DATE);
       
-    cmd_state = CMD_AWAKE;
-
-    // Arranco el timer que controla el tiempo que estamos awake
-    cmd_xTimer = xTimerCreateStatic (
-        "CMDT",
-		pdSECS_TO_TICKS(30),           // periodo en ticks
-		pdFALSE,                        // One-shot.
-		( void * ) 0,
-		cmd_TimerCallback,
-		&cmd_xTimerBuffer
-	);
-       
-    xTimerStart(cmd_xTimer, 10);  
-            
-    for(;;)
+    modocomando = false;
+    
+    // AWAKE
+    awake_timer = 60000;
+    while(awake_timer > 0)
     {
         // Reseteo el watchdog a 30s
-        u_kick_wdt(TK_CMD, 60);
+        u_kick_wdt(TK_CMD, T60S );
         
-        switch (cmd_state) {
-            
-        case CMD_AWAKE:
- 
-            c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
-            while ( xgetc( (char *)&c ) == 1 ) {
-                if ( FRTOS_CMD_process(c) ) {
-                    // Cada tecla que leo reseteo el timer
-                    xTimerStart(cmd_xTimer, 10);
+        c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
+        while ( xgetc( (char *)&c ) == 1 ) {
+            if ( FRTOS_CMD_process(c) ) {
+                // Cada tecla que leo reseteo el timer
+                // El xgetc tiene un timeout de 10ms.
+                awake_timer = 60000;
+                if (modocomando) {
+                    awake_timer = 3600000;
                 }
-            }  
-            
-            // xgetc ya espera 10ms !!
-            //vTaskDelay( ( TickType_t)( 10 / portTICK_PERIOD_MS ) );
-            break;
-            
-        case CMD_SLEEP:
-            
-            // Duermo 30s para que la tarea entre en modo tickless.
-            vTaskDelay( ( TickType_t)(30000 / portTICK_PERIOD_MS ) );
-            c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
-            while ( xgetc( (char *)&c ) == 1 ) {
-                FRTOS_CMD_process(c);
-                
-                // Si presione una tecla me despierto. Reseteo el timer
-                // Lo reconfiguro siempre para 2MINS.
-                xTimerChangePeriod( cmd_xTimer, pdSECS_TO_TICKS(30), 10 );
-                xTimerStart(cmd_xTimer, 10); 
-                cmd_state = CMD_AWAKE;
-            } 
-            
-            // Indico que desperte y cambio de estado
-            if (cmd_state == CMD_AWAKE ) {
-                xprintf_P(PSTR("tkCmd awake..\r\n" ));
             }
-            
-            break;
-        }                     
+        }  
+           
+        awake_timer -= 10;
+    }
+    
+    xprintf_P(PSTR("tkCmd going to sleep..\r\n" ));
+    
+    // SLEEP
+    for(;;) {
+
+        u_kick_wdt(TK_CMD, T120S );
+        vTaskDelay( ( TickType_t)(60000 / portTICK_PERIOD_MS ) );                
     }      
-}
-//------------------------------------------------------------------------------
-static void cmd_TimerCallback( TimerHandle_t xTimer )
-{
-    // Indica que la tkCMD debe entrar en modo sleep.
-    cmd_state = CMD_SLEEP;
-    xprintf_P(PSTR("tkCmd sleep..\r\n" ));
 }
 //------------------------------------------------------------------------------
 static void cmdHelpFunction(void)
@@ -154,7 +113,7 @@ static void cmdHelpFunction(void)
 		xprintf_P( PSTR("-config:\r\n"));
         xprintf_P( PSTR("  default {SPY,OSE}, save, load\r\n"));
         xprintf_P( PSTR("  modocomando\r\n"));
-        xprintf_P( PSTR("  debug {none,ainput,counter,wan} {true/false}\r\n"));
+        xprintf_P( PSTR("  debug {none,ainput,counter,wan, modbus} {true/false}\r\n"));
         xprintf_P( PSTR("  ainput {0..%d} enable{true/false} aname imin imax mmin mmax offset\r\n"),( NRO_ANALOG_CHANNELS - 1 ) );
         xprintf_P( PSTR("  counter enable{true/false} cname magPP modo(PULSO/CAUDAL)\r\n") );
         xprintf_P( PSTR("  dlgid\r\n"));
@@ -162,22 +121,29 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}\r\n"));
         xprintf_P( PSTR("  pwron {hhmm}, pwroff {hhmm}\r\n"));
         xprintf_P( PSTR("  modem {apn|ip|port}\r\n"));
-
+        
+#ifdef HW_AVRDA
+        xprintf_P( PSTR("  modbus enable{true/false}, localaddr {addr}\r\n"));
+        xprintf_P( PSTR("         channel {0..%d} enable name slaaddr regaddr nro_recds fcode type codec div_p10\r\n"), ( NRO_MODBUS_CHANNELS - 1));
+		xprintf_P( PSTR("         enable=>{true/false}\r\n"));
+        xprintf_P( PSTR("         fcode=>{3,6,16}\r\n"));
+		xprintf_P( PSTR("         type=>{i16,u16,i32,u32,float}\r\n"));
+		xprintf_P( PSTR("         codec=>{c0123,c1032,c3210,c2301}\r\n"));
+#endif
         
     } else if (!strcmp_P( strupr(argv[1]), PSTR("TEST"))) {
 		xprintf_P( PSTR("-test\r\n"));
         xprintf_P( PSTR("  kill {sys, wanrx}\r\n"));
         xprintf_P( PSTR("  valve {open|close}\r\n"));
         xprintf_P( PSTR("        {enable|ctl} {on|off}\r\n"));
-        xprintf_P( PSTR("  pwr_sens3v3, pwr_sens12V,pwr_sensors {on|off}\r\n"));
+        xprintf_P( PSTR("  pwr_sens3v3, pwr_sens12V, pwr_sensors, pwr_qmbus {on|off}\r\n"));
         xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|save}\r\n"));
         xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip port}], ftime {time_ms}]\r\n"));
-        
-        //xprintf_P( PSTR("  sens3v3, sens12V, pwr_sensors {enable|disable}\r\n"));
-        //xprintf_P( PSTR("  pwr_cpres,pwr_sensext,pwr_qmbus {enable|disable}\r\n"));
-        //xprintf_P( PSTR("  rts {on|off}\r\n"));
-        //xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,nro_regs,fcode,type,codec}\r\n"));
-        //xprintf_P( PSTR("         chpoll {ch}\r\n"));
+#ifdef HW_AVRDA
+        xprintf_P( PSTR("  rts {on|off}\r\n"));
+        xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,nro_regs,fcode,type,codec}\r\n"));
+        xprintf_P( PSTR("         chpoll {ch}\r\n"));  
+#endif
         //xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload} {on|off}\r\n"));
         //xprintf_P( PSTR("      {on|off}\r\n"));
         //xprintf_P( PSTR("      link\r\n"));
@@ -245,7 +211,7 @@ static void cmdResetFunction(void)
 			FS_format(false );
 		} else if ( !strcmp_P( strupr(argv[2]), PSTR("HARD"))) {
             // Para que no se resetee x watchdog !!
-            u_kick_wdt(TK_CMD, 240);
+            u_kick_wdt(TK_CMD, T300S);
 			FS_format(true);
 		} else {
 			xprintf_P( PSTR("ERROR\r\nUSO: reset memory {hard|soft}\r\n"));
@@ -397,15 +363,13 @@ static void cmdStatusFunction(void)
 
     // https://stackoverflow.com/questions/12844117/printing-defined-constants
 
-TickType_t xRemainingTime;
 fat_s l_fat;
 
-    xprintf("Spymovil %s %s TYPE=%s, VER=%s %s \r\n" , HW_MODELO, FRTOS_VERSION, FW_TYPE, FW_REV, FW_DATE);
+    xprintf("Spymovil %s %s TYPE=%s, VER=%s HW=%s %s \r\n" , HW_MODELO, FRTOS_VERSION, FW_TYPE, FW_REV, HW, FW_DATE);
     xprintf_P(PSTR("id: %s\r\n"), NVM_id2str());
     xprintf_P(PSTR("sign: %s\r\n"), NVM_signature2str());
     
-    xRemainingTime = xTimerGetExpiryTime( cmd_xTimer ) - xTaskGetTickCount();
-    xprintf_P(PSTR("TERM remain time: %lu s\r\n"), pdTICS_TO_SECS(xRemainingTime) );
+    xprintf_P(PSTR("TERM remain time: %lu s\r\n"), ( awake_timer / 1000 ) );
     
     u_print_tasks_running();
      
@@ -415,15 +379,17 @@ fat_s l_fat;
         // Stats de memoria
     FAT_read(&l_fat);
     xprintf_P( PSTR(" memory: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat.head,l_fat.tail, l_fat.count );
-
-    u_print_tasks_running();
     
     WAN_print_configuration();
     modem_print_configuration();
     base_print_configuration();
     ainputs_print_configuration();
     counter_print_configuration();
-
+    
+#ifdef HW_AVRDA
+    modbus_print_configuration();
+#endif
+    
     xprintf_P(PSTR(" Frame: "));
     u_xprint_dr( get_dataRcd_ptr());
 }
@@ -432,6 +398,16 @@ static void cmdTestFunction(void)
 {
 
     FRTOS_CMD_makeArgv();
+ 
+#ifdef HW_AVRDA
+    // MODBUS
+	// modbus genpoll {type(F|I} sla fcode addr length }\r\n\0"));
+	//        chpoll {ch}\r\n\0"));
+	if ( !strcmp_P( strupr(argv[1]), PSTR("MODBUS")) ) {
+		modbus_test( argv ) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
+		return;
+	}
+#endif
     
     // MODEM
     // modem {prender|apagar|atmode|exitat}
@@ -482,7 +458,7 @@ static void cmdTestFunction(void)
         return;
     }
 
-    // pwr_sens3v3, pwr_sens12V, pwr_sensors{enable|disable}
+    // pwr_sens3v3, pwr_sens12V, pwr_sensors, pwr_qmbus {on|off}
     if (!strcmp_P( strupr(argv[1]), PSTR("PWR_SENS12V"))  ) {
                
         if (!strcmp_P( strupr(argv[2]), PSTR("ON"))  ) {
@@ -536,6 +512,24 @@ static void cmdTestFunction(void)
         pv_snprintfP_ERR();
         return;
     }
+    
+    if (!strcmp_P( strupr(argv[1]), PSTR("PWR_QMBUS"))  ) {
+               
+        if (!strcmp_P( strupr(argv[2]), PSTR("ON"))  ) {
+            SET_EN_PWR_QMBUS();
+            pv_snprintfP_OK();
+            return;
+        }        
+
+        if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))  ) {
+            CLEAR_EN_PWR_QMBUS();
+            pv_snprintfP_OK();
+            return;
+        } 
+        
+        pv_snprintfP_ERR();
+        return;
+    }
 
     pv_snprintfP_ERR();
     return;
@@ -547,6 +541,32 @@ static void cmdConfigFunction(void)
     
     FRTOS_CMD_makeArgv();
 
+#ifdef HW_AVRDA
+    // MODBUS:
+    // config modbus {0..%d} name slaaddr regaddr nro_recds fcode type codec div_p10
+    // config modbus channel {0..%d} enable name slaaddr regaddr nro_recds fcode type codec div_p10
+	if ( strcmp_P ( strupr( argv[1]), PSTR("MODBUS")) == 0 ) {
+        
+        //  enable
+        if ( strcmp_P ( strupr( argv[2]), PSTR("ENABLE")) == 0 ) {
+            modbus_config_enable ( argv[3]) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
+            return;
+        }
+        
+        // localaddr 
+        if ( strcmp_P ( strupr( argv[2]), PSTR("LOCALADDR")) == 0 ) {
+            modbus_config_localaddr ( argv[3]) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
+            return;
+        }
+
+        // channel {0..%d} name slaaddr regaddr nro_recds fcode type codec div_p10
+        if ( strcmp_P ( strupr( argv[2]), PSTR("CHANNEL")) == 0 ) {
+            modbus_config_channel( atoi(argv[3]), argv[4], argv[5], argv[6], argv[7], argv[8],argv[9],argv[10], argv[11],argv[12] ) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
+            return;
+        }
+    }
+#endif
+    
     // MODEM:
     // config modem {apn|ip|port}
     if ( strcmp_P ( strupr( argv[1]), PSTR("MODEM")) == 0 ) {
@@ -625,7 +645,7 @@ static void cmdConfigFunction(void)
 	}
     
     // DEBUG
-    // none,config debug (ainput, counter, wan, consigna) (true,false)
+    // none,config debug (ainput, counter, wan, modbus, consigna) (true,false)
     if (!strcmp_P( strupr(argv[1]), PSTR("DEBUG")) ) {
         u_config_debug( argv[2], argv[3]) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
 		return;
@@ -643,8 +663,7 @@ static void cmdConfigFunction(void)
     // config modocomando
     if ( strcmp_P ( strupr( argv[1]), PSTR("MODOCOMANDO")) == 0 ) {
         // Cambio el periodo a 60 mins.
-        xTimerChangePeriod( cmd_xTimer, pdSECS_TO_TICKS(3600), 10 );
-        xTimerStart(cmd_xTimer, 10); 
+        modocomando = true; 
         pv_snprintfP_OK();
         return;
     }

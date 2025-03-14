@@ -9,6 +9,14 @@
  * crear un projecto con todos los perifericos que usemos y bajar el codigo
  * para ver como se inicializan y se manejan.
  *
+ * Version 1.0.0 @ 20250313
+ * Creamos la version FWDLGX que toma como base FWDLG.
+ * Cambiamos el modo de operar la terminal. Solo se hace con modocomando.
+ * CONSUMOS:
+ * - SPQ_AVRDA_R1: 0.925 mA
+ * - SPQ_AVRDA_R2: 0.66 mA
+ * - SPX_XMEGA:  24 mA
+ * 
  * -----------------------------------------------------------------------------
  * Version 1.3.9 @ 20250115
  * Pongo un nuevo define para CNTF y CNTE ya que las nuevas placas SPQ tienen el
@@ -223,7 +231,7 @@
 #include "FWDLGX.h"
 
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
 FUSES = {
 	.WDTCFG = 0x0B, // WDTCFG {PERIOD=8KCLK, WINDOW=OFF}
@@ -245,7 +253,7 @@ int main(void) {
 uint8_t i;
     
 // Leo la causa del reset para trasmitirla en el init.
-#if defined MODEL_M3
+#ifdef HW_AVRDA
 	wdg_resetCause = RSTCTRL.RSTFR;
 	RSTCTRL.RSTFR = 0xFF;
 #endif
@@ -257,6 +265,9 @@ uint8_t i;
     frtos_open(fdWAN, 115200 );
     frtos_open(fdNVM, 0 );   
     frtos_open(fdI2C, 100 );
+#ifdef HW_AVRDA
+    frtos_open(fdRS485A, 9600 );
+#endif
     
     // Creo el semaforo de systemVars
     SYSTEM_INIT();
@@ -268,6 +279,7 @@ uint8_t i;
     ainputs_init_outofrtos();
     counter_init_outofrtos(&xHandle_tkCtl);
     modem_init_outofrtos(&xHandle_tkWANRX);
+    rs485_init_outofrtos(&xHandle_tkRS485RX);
     
     // Inicializo el vector de tareas activas
     for (i=0; i< NRO_TASKS; i++) {
@@ -286,7 +298,8 @@ uint8_t i;
     xHandle_tkSys = xTaskCreateStatic( tkSys, "SYS", tkSys_STACK_SIZE, (void *)1, tkSys_TASK_PRIORITY, tkSys_Buffer, &tkSys_Buffer_Ptr );
     xHandle_tkWANRX = xTaskCreateStatic( tkWanRX, "WANRX", tkWANRX_STACK_SIZE, (void *)1, tkWANRX_TASK_PRIORITY, tkWANRX_Buffer, &tkWANRX_Buffer_Ptr );
     xHandle_tkWAN = xTaskCreateStatic( tkWan, "WAN", tkWAN_STACK_SIZE, (void *)1, tkWAN_TASK_PRIORITY, tkWAN_Buffer, &tkWAN_Buffer_Ptr );
-
+    xHandle_tkRS485RX = xTaskCreateStatic( tkRS485RX, "RS485", tkRS485RX_STACK_SIZE, (void *)1, tkRS485RX_TASK_PRIORITY, tkRS485RX_Buffer, &tkRS485RX_Buffer_Ptr );
+    
     /* Arranco el RTOS. */
 	vTaskStartScheduler();
   

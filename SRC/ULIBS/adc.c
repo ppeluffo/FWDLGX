@@ -18,7 +18,7 @@ uint16_t adc_buffer[32];
 int8_t ADC_init()
 {
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	//ADC0.CTRLB = ADC_SAMPNUM_NONE_gc; /* No accumulation */
     ADC0.CTRLB = ADC_SAMPNUM_ACC16_gc; // 16 cuentas
@@ -75,7 +75,7 @@ int8_t ADC_init()
 void ADC_enable()
 {
     
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ADC0.CTRLA |= ADC_ENABLE_bm;
     vTaskDelay( ( TickType_t)( 100 ) );
@@ -93,7 +93,7 @@ void ADC_enable()
  */
 void ADC_disable()
 {
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ADC0.CTRLA &= ~ADC_ENABLE_bm;
     vTaskDelay( ( TickType_t)( 100 ) );
@@ -111,7 +111,7 @@ void ADC_disable()
  */
 void ADC_start_conversion(adc_0_channel_t channel)
 {
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ADC0.CTRLA &= ~ADC_CONVMODE_bm;
 	ADC0.MUXPOS  = channel;
@@ -130,7 +130,7 @@ void ADC_start_conversion(adc_0_channel_t channel)
  */
 void ADC_start_diff_conversion(adc_0_channel_t channel, adc_0_muxneg_channel_t channel1)
 {
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ADC0.CTRLA |= ADC_CONVMODE_bm;
 	ADC0.MUXPOS  = channel;
@@ -148,7 +148,7 @@ void ADC_start_diff_conversion(adc_0_channel_t channel, adc_0_muxneg_channel_t c
  */
 void ADC_stop_conversion()
 {
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ADC0.COMMAND = ADC_SPCONV_bm;
 
@@ -165,7 +165,7 @@ void ADC_stop_conversion()
    */
 bool ADC_is_conversion_done()
 {
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	return (ADC0.INTFLAGS & ADC_RESRDY_bm);
 #endif
@@ -182,7 +182,7 @@ adc_result_t ADC_get_conversion_result(void)
     
  uint16_t adcVal;
  
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     adcVal = ADC0.RES;
     adcVal = adcVal >> ADC_SHIFT_DIV16;
 #endif
@@ -199,7 +199,7 @@ adc_result_t ADC_get_conversion(adc_0_channel_t channel)
 {
 	adc_result_t res;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ADC_start_conversion(channel);
 	while (!ADC_is_conversion_done())
@@ -220,7 +220,7 @@ diff_adc_result_t ADC_get_diff_conversion(adc_0_channel_t channel, adc_0_muxneg_
 {
 	diff_adc_result_t res;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     
 	ADC_start_diff_conversion(channel, channel1);
 	while (!ADC_is_conversion_done())
@@ -240,7 +240,7 @@ diff_adc_result_t ADC_get_diff_conversion(adc_0_channel_t channel, adc_0_muxneg_
    */
 uint8_t ADC_get_resolution()
 {
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 	return (ADC0.CTRLA & ADC_RESSEL0_bm) ? 10 : 12;
 #endif
     
@@ -251,7 +251,7 @@ uint16_t ADC_read_single(adc_0_channel_t channel, bool debug)
     
 uint16_t adc_acc;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     ADC_enable();
     adc_acc = ADC_get_conversion(channel); /* ADC input pin 12 */
     ADC_disable();
@@ -275,7 +275,7 @@ float adc_acc = 0.0;
     }
 
     // Muestreo
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
 
     ADC_enable();
     for (i=0; i<samples; i++) {
@@ -304,7 +304,7 @@ uint16_t ADC_read_sens3v3(void)
     
 uint16_t adc_acc;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     adc_acc = ADC_read_multiple(ADC_MUXPOS_AIN12_gc, 64, false); /* ADC input pin 12 */
 #endif
    
@@ -317,7 +317,7 @@ uint16_t ADC_read_sens12v(void)
 
 uint16_t adc_acc =0;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     adc_acc = ADC_read_multiple(ADC_MUXPOS_AIN11_gc, 64, false);
 #endif
     
