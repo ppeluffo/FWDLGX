@@ -32,6 +32,12 @@ extern "C" {
     #define RTS_RS485_PIN_bp       PIN7_bp
 #endif
 
+    // EN_PWR_CPRES (output)
+    #define EN_PWR_CPRES_PORT         PORTD
+    #define EN_PWR_CPRES              6
+    #define EN_PWR_CPRES_PIN_bm       PIN6_bm   
+    #define EN_PWR_CPRES_PIN_bp       PIN6_bp
+
     // EN_PWR_QMBUS (output)
     #define EN_PWR_QMBUS_PORT         PORTF
     #define EN_PWR_QMBUS              1
@@ -72,6 +78,10 @@ extern "C" {
     #define PWR_SENSORS_PIN_bp       PIN1_bp
 
 #endif
+
+void SET_EN_PWR_CPRES(void);
+void CLEAR_EN_PWR_CPRES(void);
+void CONFIG_EN_PWR_CPRES(void);
 
 void SET_EN_PWR_QMBUS(void);
 void CLEAR_EN_PWR_QMBUS(void);

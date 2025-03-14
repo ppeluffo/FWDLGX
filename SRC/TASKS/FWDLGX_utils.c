@@ -29,6 +29,9 @@ void system_init(void)
 	CLEAR_RTS_RS485();
     CONFIG_EN_PWR_QMBUS();
     
+    CONFIG_EN_PWR_CPRES();
+    CLEAR_EN_PWR_CPRES();
+    
     ADC_init();
     
     CONFIG_EN_SENS3V3();
@@ -189,6 +192,7 @@ void u_config_default( char *modo )
     counter_config_defaults();
     modem_config_defaults(modo);
     modbus_config_defaults();
+    consigna_config_defaults();
     
 }
 //------------------------------------------------------------------------------
@@ -225,6 +229,12 @@ int16_t nvm_ptr;
 
     // MODBUS
     nvm_ptr = modbus_save_config_in_NVM(nvm_ptr);
+    if (nvm_ptr == -1) {
+        return(false);
+    }
+    
+    // CONSIGNA
+    nvm_ptr = consigna_save_config_in_NVM(nvm_ptr);
     if (nvm_ptr == -1) {
         return(false);
     }
@@ -273,6 +283,12 @@ int16_t nvm_ptr;
 
     // MODBUS
     nvm_ptr = modbus_load_config_from_NVM(nvm_ptr);
+    if ( nvm_ptr == -1 ) {
+        return(false);
+    }
+
+    // CONSIGNA
+    nvm_ptr = consigna_load_config_from_NVM(nvm_ptr);
     if ( nvm_ptr == -1 ) {
         return(false);
     }
@@ -437,10 +453,17 @@ void u_print_tasks_running(void)
         xprintf_P(PSTR(" wan[%d]"), tk_watchdog[TK_WAN]);
     }
 
+ #ifdef HW_AVRDA
+
     if ( tk_running[TK_RS485RX] ) {
         xprintf_P(PSTR(" rs485rx[%d]"), tk_watchdog[TK_RS485RX]);
     }
 
+    if ( tk_running[TK_CPRES] ) {
+        xprintf_P(PSTR(" cpres[%d]"), tk_watchdog[TK_CPRES]);
+    }
+  
+#endif
     
     xprintf_P(PSTR("\r\n"));
     

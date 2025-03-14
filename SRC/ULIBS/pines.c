@@ -1,7 +1,28 @@
 
 #include "pines.h"
 
-//------------------------------------------------------------------------------ 
+//------------------------------------------------------------------------------
+void SET_EN_PWR_CPRES(void)
+{
+#ifdef HW_AVRDA
+    EN_PWR_CPRES_PORT.OUT |= EN_PWR_CPRES_PIN_bm;
+#endif 
+}
+//-----------------------------------------------------------------------------
+void CLEAR_EN_PWR_CPRES(void)
+{
+#ifdef HW_AVRDA
+    EN_PWR_CPRES_PORT.OUT &= ~EN_PWR_CPRES_PIN_bm;
+#endif 
+}
+//-----------------------------------------------------------------------------
+void CONFIG_EN_PWR_CPRES(void)
+{
+#ifdef HW_AVRDA
+    EN_PWR_CPRES_PORT.DIR |= EN_PWR_CPRES_PIN_bm;
+#endif 
+}
+//-----------------------------------------------------------------------------
 void SET_EN_PWR_QMBUS(void)
 {
 #ifdef HW_AVRDA

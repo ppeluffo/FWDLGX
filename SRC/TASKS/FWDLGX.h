@@ -80,6 +80,8 @@ extern "C" {
 #include "modem_lte.h"
 #include "modbus.h"
 #include "rs485.h"
+#include "toyi_valves.h"
+#include "consignas.h"
 
 #ifdef HW_XMEGA
 
@@ -129,6 +131,7 @@ extern "C" {
 #define tkWANRX_TASK_PRIORITY	( tskIDLE_PRIORITY + 1 )
 #define tkWAN_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
 #define tkRS485RX_TASK_PRIORITY ( tskIDLE_PRIORITY + 1 )
+#define tkCtlPres_TASK_PRIORITY ( tskIDLE_PRIORITY + 1 )
 
 #define tkCtl_STACK_SIZE		384
 #define tkCmd_STACK_SIZE		512
@@ -136,6 +139,7 @@ extern "C" {
 #define tkWANRX_STACK_SIZE      384
 #define tkWAN_STACK_SIZE		512
 #define tkRS485RX_STACK_SIZE	384
+#define tkCtlPres_STACK_SIZE	384
 
 StaticTask_t tkCtl_Buffer_Ptr;
 StackType_t tkCtl_Buffer [tkCtl_STACK_SIZE];
@@ -155,7 +159,10 @@ StackType_t tkWAN_Buffer [tkWAN_STACK_SIZE];
 StaticTask_t tkRS485RX_Buffer_Ptr;
 StackType_t tkRS485RX_Buffer [tkRS485RX_STACK_SIZE];
 
-TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkWANRX, xHandle_tkWAN, xHandle_tkRS485RX;
+StaticTask_t tkCtlPres_Buffer_Ptr;
+StackType_t tkCtlPres_Buffer [tkCtlPres_STACK_SIZE];
+
+TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkWANRX, xHandle_tkWAN, xHandle_tkRS485RX, xHandle_tkCtlPres;
 
 void tkCtl(void * pvParameters);
 void tkCmd(void * pvParameters);
@@ -163,6 +170,7 @@ void tkSys(void * pvParameters);
 void tkWanRX(void * pvParameters);
 void tkWan(void * pvParameters);
 void tkRS485RX(void * pvParameters);
+void tkCtlPres(void *pvParameters);
 
 bool starting_flag;
 
@@ -201,9 +209,9 @@ bool WAN_read_debug(void);
 
 //------------------------------------------------------------------------------
 // Task running & watchdogs
-#define NRO_TASKS  5
+#define NRO_TASKS  6
 
-typedef enum { TK_CMD = 0, TK_SYS, TK_WANRX, TK_WAN, TK_RS485RX } t_wdg_ids;
+typedef enum { TK_CMD = 0, TK_SYS, TK_WANRX, TK_WAN, TK_RS485RX, TK_CPRES } t_wdg_ids;
 
 void u_kick_wdt( t_wdg_ids wdg_id, uint16_t wdg_timer);
 

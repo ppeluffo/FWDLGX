@@ -129,6 +129,7 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("         fcode=>{3,6,16}\r\n"));
 		xprintf_P( PSTR("         type=>{i16,u16,i32,u32,float}\r\n"));
 		xprintf_P( PSTR("         codec=>{c0123,c1032,c3210,c2301}\r\n"));
+        xprintf_P( PSTR("  consigna enable{true/false} hhmm_diurna hhmm_nocturna\r\n") );
 #endif
         
     } else if (!strcmp_P( strupr(argv[1]), PSTR("TEST"))) {
@@ -143,6 +144,9 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  rts {on|off}\r\n"));
         xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,nro_regs,fcode,type,codec}\r\n"));
         xprintf_P( PSTR("         chpoll {ch}\r\n"));  
+        xprintf_P( PSTR("  valve {open|close}\r\n"));
+        xprintf_P( PSTR("        {enable|ctl} {on|off}\r\n"));
+        xprintf_P( PSTR("  consigna {diurna|nocturna}\r\n"));
 #endif
         //xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload} {on|off}\r\n"));
         //xprintf_P( PSTR("      {on|off}\r\n"));
@@ -387,6 +391,7 @@ fat_s l_fat;
     counter_print_configuration();
     
 #ifdef HW_AVRDA
+    consigna_print_configuration();
     modbus_print_configuration();
 #endif
     
@@ -400,6 +405,36 @@ static void cmdTestFunction(void)
     FRTOS_CMD_makeArgv();
  
 #ifdef HW_AVRDA
+      
+    // VALVE
+    if (!strcmp_P( strupr(argv[1]), PSTR("VALVE"))  ) {
+        if ( test_valve(argv[2], argv[3]) ) {
+            pv_snprintfP_OK();
+        } else {
+            pv_snprintfP_ERR();
+        }
+        return;
+    }
+    
+    // CONSIGNA
+    // test consigna {diurna|nocturna}
+    if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))  ) {
+        if (!strcmp_P( strupr(argv[2]), PSTR("DIURNA"))  ) {
+            CONSIGNA_set_diurna();
+            pv_snprintfP_OK();
+            return;
+        }
+        
+        if (!strcmp_P( strupr(argv[2]), PSTR("NOCTURNA"))  ) {
+            CONSIGNA_set_nocturna();
+            pv_snprintfP_OK();
+            return;
+        }
+        
+        pv_snprintfP_ERR();
+        return;  
+    }
+    
     // MODBUS
 	// modbus genpoll {type(F|I} sla fcode addr length }\r\n\0"));
 	//        chpoll {ch}\r\n\0"));
@@ -542,6 +577,14 @@ static void cmdConfigFunction(void)
     FRTOS_CMD_makeArgv();
 
 #ifdef HW_AVRDA
+    
+    // CONSIGNAS
+    // consigna enable hhmm_diurna hhmm_nocturna
+    if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))) { 
+        consigna_config( argv[2], argv[3], argv[4] ) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
+		return;
+    }
+    
     // MODBUS:
     // config modbus {0..%d} name slaaddr regaddr nro_recds fcode type codec div_p10
     // config modbus channel {0..%d} enable name slaaddr regaddr nro_recds fcode type codec div_p10

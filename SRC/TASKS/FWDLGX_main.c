@@ -14,7 +14,7 @@
  * Cambiamos el modo de operar la terminal. Solo se hace con modocomando.
  * CONSUMOS:
  * - SPQ_AVRDA_R1: 0.925 mA
- * - SPQ_AVRDA_R2: 0.66 mA
+ * - SPQ_AVRDA_R2: 0.43 mA
  * - SPX_XMEGA:  24 mA
  * 
  * -----------------------------------------------------------------------------
@@ -299,6 +299,7 @@ uint8_t i;
     xHandle_tkWANRX = xTaskCreateStatic( tkWanRX, "WANRX", tkWANRX_STACK_SIZE, (void *)1, tkWANRX_TASK_PRIORITY, tkWANRX_Buffer, &tkWANRX_Buffer_Ptr );
     xHandle_tkWAN = xTaskCreateStatic( tkWan, "WAN", tkWAN_STACK_SIZE, (void *)1, tkWAN_TASK_PRIORITY, tkWAN_Buffer, &tkWAN_Buffer_Ptr );
     xHandle_tkRS485RX = xTaskCreateStatic( tkRS485RX, "RS485", tkRS485RX_STACK_SIZE, (void *)1, tkRS485RX_TASK_PRIORITY, tkRS485RX_Buffer, &tkRS485RX_Buffer_Ptr );
+    xHandle_tkCtlPres = xTaskCreateStatic( tkCtlPres, "CPRES", tkCtlPres_STACK_SIZE, (void *)1, tkCtlPres_TASK_PRIORITY, tkCtlPres_Buffer, &tkCtlPres_Buffer_Ptr );
     
     /* Arranco el RTOS. */
 	vTaskStartScheduler();
