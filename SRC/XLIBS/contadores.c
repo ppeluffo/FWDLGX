@@ -49,6 +49,7 @@
 static bool f_debug_counters = false;
 
 void pv_count_pulse(void);
+void pv_counter_restore_interrupts(void);
 
 TaskHandle_t *l_xHandle_tkCtl;
 
@@ -68,6 +69,13 @@ void counter_init_outofrtos( TaskHandle_t *xHandle )
     // Habilito a interrumpir, pullup, flanco de bajada.
     cli();
     CNT0_PIN_CONFIG();
+
+#ifdef HW_XMEGA
+    PORTA.INT0MASK = PIN2_bm;
+	PORTA.INTCTRL = PORT_INT0LVL0_bm;
+	PORTA.INTFLAGS = PORT_INT0IF_bm;
+#endif
+    
     //PORTF.PIN4CTRL |= PORT_PULLUPEN_bm | PORT_ISC_FALLING_gc;
     sei();
 }
@@ -75,8 +83,27 @@ void counter_init_outofrtos( TaskHandle_t *xHandle )
 void counter_init( void )
 {
     contador.fsm_ticks_count = 0;
+    pv_counter_restore_interrupts();
+    
 }
 // ----------------------------------------------------------------------------- 
+void pv_counter_restore_interrupts(void)
+{
+    /*
+     * Configura para que el pin pueda interrumpir.
+     */
+#ifdef HW_AVRDA 
+    CNT0_PIN_CONFIG();
+#endif
+    
+#ifdef HW_XMEGA
+    PORTA.INT0MASK = PIN2_bm;
+	PORTA.INTCTRL = PORT_INT0LVL0_bm;
+	PORTA.INTFLAGS = PORT_INT0IF_bm;
+#endif
+    
+    
+}
 void counter_config_defaults( void )
 {
     /*
@@ -392,6 +419,9 @@ ISR ( PORTA_INT0_vect )
     
     pv_count_pulse();
 
+    // Restore interrupts
+    pv_counter_restore_interrupts();
+    
 }
 #endif
 

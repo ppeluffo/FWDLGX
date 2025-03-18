@@ -87,23 +87,17 @@ void CLEAR_SCL(void)
 //------------------------------------------------------------------------------  
 void CONFIG_PWR_SENSORS(void)
 { 
-#ifdef HW_AVRDA
     ( PWR_SENSORS_PORT.DIR |= PWR_SENSORS_PIN_bm);
-#endif
 }
 //------------------------------------------------------------------------------
 void SET_PWR_SENSORS(void)
 {
-#ifdef HW_AVRDA
     ( PWR_SENSORS_PORT.OUT |= PWR_SENSORS_PIN_bm );
-#endif
 }
 //------------------------------------------------------------------------------   
 void CLEAR_PWR_SENSORS(void)
 {
-#ifdef HW_AVRDA
     ( PWR_SENSORS_PORT.OUT &= ~PWR_SENSORS_PIN_bm );
-#endif
 }
 //------------------------------------------------------------------------------
 void SET_EN_SENS3V3(void)

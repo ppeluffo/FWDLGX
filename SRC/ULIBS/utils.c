@@ -107,7 +107,7 @@ float u_read_bat12v(bool debug)
 uint16_t adc = 0;
 float bat12v = 0.0;
 
-#ifdef MODEL_M3
+#ifdef HW_AVRDA
     /*
      Como acumulo en el ADC 8 samples, el resultado debo dividirlo /8
      */
