@@ -33,13 +33,7 @@ int16_t xRet = -1;
 		break;
         
     case fdRS485A:
-#ifdef R2
-        frtos_open_uart(&USART4, flags);
-#endif
-
-#ifdef R1
-        frtos_open_uart(&USART1, flags);
-#endif        
+        frtos_open_uart(&USART4, flags);     
         xRet=0;
 		break;
         
@@ -102,13 +96,7 @@ int16_t xRet = -1;
             break;
             
         case fdRS485A:
-#ifdef R2
-            xRet = frtos_ioctl_uart4( ulRequest, pvValue );
-#endif
-
-#ifdef R1
-            xRet = frtos_ioctl_uart1( ulRequest, pvValue );
-#endif            
+            xRet = frtos_ioctl_uart4( ulRequest, pvValue );        
             break;
             
         case fdI2C:
@@ -165,13 +153,7 @@ int16_t xRet = -1;
 		break;
 
     case fdRS485A:
-#ifdef R2
 		xRet = frtos_write_uart4_rs485( pvBuffer, xBytes );
-#endif
-
-#ifdef R1
-		xRet = frtos_write_uart1_rs485( pvBuffer, xBytes );
-#endif        
 		break;
         
     case fdI2C:
@@ -229,13 +211,7 @@ int16_t xRet = -1;
 		break;
 
     case fdRS485A:
-#ifdef R2
 		xRet = frtos_read_uart4( pvBuffer, xBytes );
-#endif
-
-#ifdef R1
-		xRet = frtos_read_uart1( pvBuffer, xBytes );
-#endif        
 		break;
         
     case fdI2C:

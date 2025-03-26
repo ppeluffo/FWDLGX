@@ -87,17 +87,17 @@ void CLEAR_SCL(void)
 //------------------------------------------------------------------------------  
 void CONFIG_PWR_SENSORS(void)
 { 
-    ( PWR_SENSORS_PORT.DIR |= PWR_SENSORS_PIN_bm);
+    PWR_SENSORS_PORT.DIR |= PWR_SENSORS_PIN_bm;
 }
 //------------------------------------------------------------------------------
 void SET_PWR_SENSORS(void)
 {
-    ( PWR_SENSORS_PORT.OUT |= PWR_SENSORS_PIN_bm );
+    PWR_SENSORS_PORT.OUT |= PWR_SENSORS_PIN_bm;
 }
 //------------------------------------------------------------------------------   
 void CLEAR_PWR_SENSORS(void)
 {
-    ( PWR_SENSORS_PORT.OUT &= ~PWR_SENSORS_PIN_bm );
+    PWR_SENSORS_PORT.OUT &= ~PWR_SENSORS_PIN_bm;
 }
 //------------------------------------------------------------------------------
 void SET_EN_SENS3V3(void)

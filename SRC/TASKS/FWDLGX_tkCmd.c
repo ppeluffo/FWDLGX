@@ -534,12 +534,16 @@ static void cmdTestFunction(void)
                
         if (!strcmp_P( strupr(argv[2]), PSTR("ON"))  ) {
             ainputs_prender_sensores();
+            //xprintf_P(PSTR("DEBUG SENSORS ON\r\n"));
+            //SET_PWR_SENSORS();
             pv_snprintfP_OK();
             return;
         }        
 
         if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))  ) {
             ainputs_apagar_sensores();
+            //CLEAR_PWR_SENSORS();
+            //xprintf_P(PSTR("DEBUG SENSORS OFF\r\n"));
             pv_snprintfP_OK();
             return;
         } 
