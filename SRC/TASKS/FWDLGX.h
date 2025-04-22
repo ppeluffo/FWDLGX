@@ -118,8 +118,8 @@ extern "C" {
 #endif
       
 #define FW_TYPE "FWDLGX"
-#define FW_REV "1.0.1"
-#define FW_DATE "@ 20250326"
+#define FW_REV "1.0.3"
+#define FW_DATE "@ 20250422"
 #define FRTOS_VERSION "FW:FreeRTOS 202212.01"
 
 #define pdSECS_TO_TICKS(xTimeInSecs) ((TickType_t)(((uint32_t)(xTimeInSecs) * (uint32_t)configTICK_RATE_HZ) ))

@@ -180,7 +180,7 @@ void modem_atcmd_set_ftime( char *time_ms, bool verbose);
 void modem_atcmd_read_localip(bool verbose);
 char *modem_atcmd_get_localip(void);
 
-bool modem_check_and_reconfig(bool verbose);
+bool modem_check_and_reconfig(bool verbose, bool save_dlg_config);
 
 void modem_print_configuration( void );
 bool modem_config( char *s_arg, char *s_value );

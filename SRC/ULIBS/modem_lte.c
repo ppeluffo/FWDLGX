@@ -443,10 +443,13 @@ char *apn = NULL;
         if ( apn != NULL ) {
             //memcpy(MODEM_APN, apn, sizeof(MODEM_APN) );  
             memcpy(MODEM_APN, apn, strlen(apn));  
-        }
 
-        if (verbose) {
-            xprintf_P(PSTR("APN=[%s]\r\n"), MODEM_APN);
+            if (verbose) {
+                xprintf_P(PSTR("APN=[%s]\r\n"), MODEM_APN);
+            }
+            
+        } else {
+             xprintf_P(PSTR("ERROR !!!: APN=[NULL]\r\n"));
         }
     }
        
@@ -692,7 +695,7 @@ static void modem_config_default_besteffort(void)
     
 }
 //------------------------------------------------------------------------------
-bool modem_check_and_reconfig(bool verbose)
+bool modem_check_and_reconfig(bool verbose, bool save_dlg_config)
 {
     /*
      * Revisa los parámetros del modem y va viendo si esta reseteado
@@ -702,7 +705,6 @@ bool modem_check_and_reconfig(bool verbose)
 char *p;
 char param_str[48];
 bool modem_in_default = false;
-bool save_dlg_config = false;
 
     xprintf_P(PSTR("MODEM config check and set...\r\n"));
     
@@ -756,82 +758,76 @@ bool save_dlg_config = false;
     if ( modem_in_default ) {
         /*
          * Si el modem estaba en default, los parámetros del APN y SERVER válidos
-         * sin los de la configuracion del datalogger.
+         * son los de la configuracion del datalogger.
          * Actualizo el módem con estos.
          */
         
-        xprintf_P(PSTR("MODEM in default mode: reconfigue APN & SERVER..\r\n"));
-        
-        // AT+HTPSV=192.168.0.8,5000
-        memset(param_str,'\0', strlen(param_str));
-        snprintf( param_str, sizeof(param_str), "AT+HTPSV=%s,%s",modem_conf.server_ip, modem_conf.server_port);
-        p = modem_atcmd(param_str, NULL);
-    
-        // AT+APN=SPYMOVIL.VPNANTEL,,,0
-        memset(param_str,'\0', strlen(param_str));
-        snprintf( param_str, sizeof(param_str), "AT+APN=%s,,,0", modem_conf.apn);
-        p = modem_atcmd(param_str, NULL);
-        goto quit;
-        
-    } else {
-        /*
-         * Si el modem NO esta resetado a default, puedo asumir que el APN y SERVER IP:PORT
-         * son correctos.
-         * Los leo y actualizo la configuracion del datalogger si son diferentes
-         */
-            
-        xprintf_P(PSTR("MODEM not in default mode: verify apn & server...\r\n"));
-        
-        // AT+APN?  
-        modem_atcmd_read_apn(verbose);
-        if (verbose) {
-            xprintf_P(PSTR("APN configurado en dlg: %s\r\n"), modem_conf.apn);
-        }
-        if (strstr(MODEM_APN, modem_conf.apn) == NULL) {
-            // Actualizo el APN del datalogger
-            if (verbose) {
-                xprintf_P(PSTR("Update Dlg Apn to:%s\r\n"), MODEM_APN);
-            }
-            memset(modem_conf.apn, '\0', sizeof(modem_conf.apn));
-            memcpy( modem_conf.apn, MODEM_APN, APN_LENGTH );
-            save_dlg_config = true;
-        }
-        
-        // AT+HTPSV?
-        modem_atcmd_read_server(verbose);
-        if (verbose) {
-            xprintf_P(PSTR("Server configurado en dlg: %s:%s\r\n"), modem_conf.server_ip, modem_conf.server_port );
-        }
-        if (strstr(MODEM_IP, modem_conf.server_ip) == NULL) {
-            // Actualizo el server_ip del datalogger
-            if (verbose) {
-                xprintf_P(PSTR("Update Dlg ip to:%s\r\n"), MODEM_IP);
-            }
-            memset(modem_conf.server_ip, '\0', SERVER_IP_LENGTH );
-            memcpy( modem_conf.server_ip, MODEM_IP, SERVER_IP_LENGTH );
-            save_dlg_config = true;
-        }
-    
-        if (strstr( MODEM_PORT, modem_conf.server_port) == NULL) {
-            // Actualizo el port del datalogger
-            if (verbose) {
-                xprintf_P(PSTR("Update Dlg port to:%s\r\n"), MODEM_PORT);
-            }          
-            memset(modem_conf.server_port, '\0', SERVER_PORT_LENGTH );
-            memcpy( modem_conf.server_port, MODEM_PORT, SERVER_PORT_LENGTH );
-            save_dlg_config = true;
-        }
-
-    }
-            
- quit:
-    
-    // Salvamos la configuracion y reinicia el modem
-    if ( modem_in_default ) {
+        // Salvo la configuracion basica del modem.
         p = modem_atcmd("AT+S", NULL);
+
+        xprintf_P(PSTR("MODEM in default mode: reconfigue APN & SERVER in modem and datalogger..STOP\r\n"));
+        return(false);
     }
     
-    return(save_dlg_config);
+    // AT+HTPSV?
+    // Me quedo con MODEM_APN, MODEM_IP, MODEM_PORT
+    modem_atcmd_read_server(verbose);
+    modem_atcmd_read_apn(verbose);
+    
+    if (verbose) {
+        xprintf_P(PSTR("DLG server config: %s, %s:%s\r\n"), modem_conf.apn, modem_conf.server_ip, modem_conf.server_port );
+        xprintf_P(PSTR("MODEM server config: %s, %s:%s\r\n"), MODEM_APN, MODEM_IP, MODEM_PORT );
+    }
+    
+    // Confirmo si el datalogger tiene configurado el apn y server
+    if ( strlen( modem_conf.apn) == 0) {
+        xprintf_P(PSTR("Reconfigue APN & SERVER in datalogger..STOP\r\n"));
+        return(false);        
+    }
+    
+    if ( strlen( MODEM_APN) == 0) {
+        xprintf_P(PSTR("Reconfigue APN & SERVER in modem..STOP\r\n"));
+        return(false);        
+    }   
+
+    if ( strcmp(modem_conf.apn, MODEM_APN) != 0 ) {
+        xprintf_P(PSTR("APN different in modem/dlg: Reconfigure..STOP\r\n"));
+        return(false);          
+    }
+    
+    if ( strlen(modem_conf.server_ip) == 0 ) {
+        xprintf_P(PSTR("Reconfigue APN & SERVER in datalogger..STOP\r\n"));
+        return(false);        
+    }
+    
+    if ( strlen( MODEM_IP) == 0) {
+        xprintf_P(PSTR("Reconfigue APN & SERVER in modem..STOP\r\n"));
+        return(false);        
+    }
+   
+    if ( strcmp(modem_conf.server_ip, MODEM_IP) != 0 ) {
+        xprintf_P(PSTR("IP different in modem/dlg: Reconfigure..STOP\r\n"));
+        return(false);          
+    }
+    
+    if ( strlen( modem_conf.server_port) ==  0) {
+        xprintf_P(PSTR("Reconfigue APN & SERVER in datalogger..STOP\r\n"));
+        return(false);        
+    }
+
+    if ( strlen( MODEM_PORT) == 0) {
+        xprintf_P(PSTR("Reconfigue APN & SERVER in modem..STOP\r\n"));
+        return(false);        
+    }
+    
+    if ( strcmp(modem_conf.server_port, MODEM_PORT) != 0 ) {
+        xprintf_P(PSTR("PORT different in modem/dlg: Reconfigure..STOP\r\n"));
+        return(false);          
+    }
+    
+ quit:
+ 
+    return(true);
     
 }
 //------------------------------------------------------------------------------

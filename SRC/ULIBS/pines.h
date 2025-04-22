@@ -18,19 +18,10 @@ extern "C" {
 #ifdef HW_AVRDA
 
     // RS485_RTS
-#ifdef R1
-    #define RTS_RS485_PORT         PORTC    
-    #define RTS_RS485              2
-    #define RTS_RS485_PIN_bm       PIN2_bm
-    #define RTS_RS485_PIN_bp       PIN2_bp    
-#endif
-    
-#ifdef R2
     #define RTS_RS485_PORT         PORTD    
     #define RTS_RS485              7
     #define RTS_RS485_PIN_bm       PIN7_bm
     #define RTS_RS485_PIN_bp       PIN7_bp
-#endif
 
     // EN_PWR_CPRES (output)
     #define EN_PWR_CPRES_PORT         PORTD

@@ -9,6 +9,22 @@
  * crear un projecto con todos los perifericos que usemos y bajar el codigo
  * para ver como se inicializan y se manejan.
  *
+ * FUSES:
+ * avrdude -px256a3b -cavrispmkII -Pusb -p x256a3b -V -u -Ufuse0:w:0xff:m -Ufuse1:w:0xa:m -Ufuse2:w:0xfd:m -Ufuse4:w:0xf5:m -Ufuse5:w:0xd4:m
+ * FIRMWARE
+ * avrdude -v -Pusb -c avrispmkII -p x256a3 -F -e -U flash:w:FWDLGX.X.production.hex
+ * 
+ * -----------------------------------------------------------------------------
+ * Version 1.0.2 @ 20250421
+ * 1- En tkCtl la rutina de watchdog solo queda en loop, pero esto implica que el
+ *   watchdog este prendido cosa que veo que no pasa en los SPX.
+ *   Agrego entonces un reset.
+ * 2- Al vaciar la memoria si tiene muchos datos se resetea por TO. Agrego en wan_send_from_memory
+ *   el resetear el watchdog c/frame que transmito
+ * 3- Cuando el modem no tiene el APN ni el datalogger no lo puede resolver.Aunque no tengan
+ *   el APN pero si la IP/PORT, el modem se puede conectar.
+ * 
+ * -----------------------------------------------------------------------------
  * Version 1.0.0 @ 20250313
  * Creamos la version FWDLGX que toma como base FWDLG.
  * Cambiamos el modo de operar la terminal. Solo se hace con modocomando.

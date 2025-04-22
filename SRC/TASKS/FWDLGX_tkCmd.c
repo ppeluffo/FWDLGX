@@ -406,6 +406,28 @@ static void cmdTestFunction(void)
  
 #ifdef HW_AVRDA
       
+    // RS485A
+    if (!strcmp_P( strupr(argv[1]), PSTR("RS485A"))  ) {
+        if (!strcmp_P( strupr(argv[2]), PSTR("WRITE"))  ) {
+            //SET_RTS_RS485();
+            vTaskDelay( ( TickType_t)( 5 ) );   
+            xfprintf_P( fdRS485A, PSTR("The quick brown fox jumps over the lazy dog \r\n"));
+            vTaskDelay( ( TickType_t)( 2 ) );
+            // RTS OFF: Habilita la recepcion del chip
+            //CLEAR_RTS_RS485();
+            pv_snprintfP_OK();
+            return;
+        }
+        
+        //if (!strcmp_P( strupr(argv[2]), PSTR("READ"))  ) {
+        //    RS485_read_RXbuffer();
+        //    return;
+        //}
+        
+        pv_snprintfP_ERR();
+        return;  
+    }
+  
     // VALVE
     if (!strcmp_P( strupr(argv[1]), PSTR("VALVE"))  ) {
         if ( test_valve(argv[2], argv[3]) ) {

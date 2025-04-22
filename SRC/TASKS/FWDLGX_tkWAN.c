@@ -68,15 +68,15 @@ uint16_t uxHighWaterMark;
 
 char tmpLocalStr[64] = { 0 };
 
-#define PING_TRYES      5
-#define RECOVERID_TRYES         2
-#define CONFIGBASE_TRYES        2
-#define CONFIGAIPUTS_TRYES      2
-#define CONFIGCOUNTERS_TRYES    2
-#define CONFIGCONSIGNA_TRYES    2
-#define CONFIGPILOTO_TRYES      2
-#define CONFIGMODBUS_TRYES      2
-#define DATA_TRYES              2
+#define PING_TRYES              5
+#define RECOVERID_TRYES         3
+#define CONFIGBASE_TRYES        3
+#define CONFIGAIPUTS_TRYES      3
+#define CONFIGCOUNTERS_TRYES    3
+#define CONFIGCONSIGNA_TRYES    3
+#define CONFIGPILOTO_TRYES      3
+#define CONFIGMODBUS_TRYES      3
+#define DATA_TRYES              3
 
 
 //------------------------------------------------------------------------------
@@ -205,6 +205,7 @@ static void wan_state_offline(void)
 uint8_t i;
 bool atmode = false;
 bool save_dlg_config = false;
+bool retS = false;
 
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
 //    xprintf_P(PSTR("STACK offline_in = %d\r\n"), uxHighWaterMark );
@@ -230,10 +231,20 @@ bool save_dlg_config = false;
     
     
     // Estoy en modo AT
-    save_dlg_config = modem_check_and_reconfig(true);  
+    if ( ! modem_check_and_reconfig(true, &save_dlg_config) ) {
+        /*
+         * EL chequeo de la configuracion del modem indica que algo anda mal
+         * y no puede seguir.
+         */
+        xprintf_P(PSTR("MODEM config ERROR. Reconfigure modem and datalogger. STOP\r\n"));
+        wan_state = WAN_APAGADO;
+        goto quit; 
+    }
+    
     if ( save_dlg_config ) {
         u_save_config_in_NVM();
     }
+    
     vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
             
     // Leo el CSQ, IMEI, ICCID:
@@ -1340,6 +1351,8 @@ bool retS = false;
     xprintf_P( PSTR("WAN:: wrPtr=%d,rdPtr=%d,count=%d\r\n"), l_fat1.head, l_fat1.tail, l_fat1.count );
     
     while ( l_fat1.count > 0 ) {
+        
+        u_kick_wdt(TK_WAN, T120S);
         
         xprintf_P( PSTR("WAN: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat1.head, l_fat1.tail, l_fat1.count );
         

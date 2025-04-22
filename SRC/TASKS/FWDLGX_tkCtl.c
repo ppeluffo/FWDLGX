@@ -111,7 +111,7 @@ uint8_t i;
             if ( tk_watchdog[i] <= 0 ) {        
                 xprintf_P( PSTR("ALARM !!!. TKCTL: RESET BY WDG %d\r\n"), i );
                 vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-                //reset();
+                reset();
                 
                 while(1)
                     ;
