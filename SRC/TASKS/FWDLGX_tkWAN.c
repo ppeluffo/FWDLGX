@@ -1354,7 +1354,7 @@ bool retS = false;
         
         u_kick_wdt(TK_WAN, T120S);
         
-        xprintf_P( PSTR("WAN: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat1.head, l_fat1.tail, l_fat1.count );
+        xprintf_P( PSTR("WAN:: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat1.head, l_fat1.tail, l_fat1.count );
         
         if ( FS_readRcd( &dr, sizeof(dataRcd_s) ) ) {
             retS = wan_process_frame_data(&dr);

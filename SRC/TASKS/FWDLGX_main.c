@@ -189,7 +189,8 @@
  * http://www.CABRERA/MONS/ENRIQUE/Montevideo/Padron/2354U
  * 18488618
  * 22923645
- * 
+ * CMC-20042
+ * Circuito 625
  * -----------------------------------------------------------------------------
  * V1.1.0 @ 20230620
  * Si el canal analogico 2 esta configurado, entonces la bateria es 0.
