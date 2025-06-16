@@ -16,7 +16,7 @@ extern "C" {
 #include "stdbool.h"
     
 #ifdef HW_AVRDA
-
+   
     // RS485_RTS
     #define RTS_RS485_PORT         PORTD    
     #define RTS_RS485              7

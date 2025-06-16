@@ -61,8 +61,14 @@ fat_s l_fat;
     // Por ultimo habilito a todas las otras tareas a arrancar
     starting_flag = true;
        
+
+    //debug_print_regs();
+    
 	for( ;; )
 	{
+        //PORTD.OUTTGL = 0x1;
+        //debug_print_regs();
+        
         led_flash();
         sys_watchdog_check();
         sys_daily_reset();       

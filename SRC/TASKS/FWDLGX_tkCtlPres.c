@@ -23,6 +23,7 @@ void tkCtlPres(void * pvParameters)
      */
     
 ( void ) pvParameters;
+uint32_t ulNotificationValue;
 
 
 	while (! starting_flag )
@@ -34,12 +35,14 @@ void tkCtlPres(void * pvParameters)
     
 	vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     xprintf_P(PSTR("Starting tkCtlPresion..\r\n"));
-       
+           
     // Espero que todo este arrancado (30s)
     vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
     
     u_kick_wdt(TK_CPRES, T300S);
-    
+   
+    VALVE_close();
+        
     if ( consigna_conf.enabled ) {
         pv_consigna_initService();          
     }
@@ -52,10 +55,21 @@ void tkCtlPres(void * pvParameters)
          * 
          */
         u_kick_wdt(TK_CPRES, T300S);
-		vTaskDelay( ( TickType_t)( 55000 / portTICK_PERIOD_MS ) );
+		//vTaskDelay( ( TickType_t)( 55000 / portTICK_PERIOD_MS ) );
       
-        if ( consigna_conf.enabled ) {
-            pv_consigna_service();
+        // Espero hasta 45 secs un mensaje
+        ulNotificationValue = ulTaskNotifyTake(pdTRUE, ( TickType_t)( (1000 * 45 ) / portTICK_PERIOD_MS ));
+        
+        if( ( ulNotificationValue & SIGNAL_OPEN_VALVE ) != 0 ) {
+            xprintf_P(PSTR("tkCtlPres OPEN_VALVE msg rcvd.\r\n")); 
+            VALVE_open();
+            
+        } else if( ( ulNotificationValue & SIGNAL_CLOSE_VALVE ) != 0 ) {
+            xprintf_P(PSTR("tkCtlPres CLOSE_VALVE msg rcvd.\r\n"));  
+            VALVE_close();
+       
+        } else {
+            vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
         }
                
 	}

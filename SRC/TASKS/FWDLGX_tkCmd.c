@@ -140,6 +140,7 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  pwr_sens3v3, pwr_sens12V, pwr_sensors, pwr_qmbus {on|off}\r\n"));
         xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|save}\r\n"));
         xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip port}], ftime {time_ms}]\r\n"));
+
 #ifdef HW_AVRDA
         xprintf_P( PSTR("  rts {on|off}\r\n"));
         xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,nro_regs,fcode,type,codec}\r\n"));
@@ -393,6 +394,7 @@ fat_s l_fat;
 #ifdef HW_AVRDA
     consigna_print_configuration();
     modbus_print_configuration();
+    valve_print_configuration();
 #endif
     
     xprintf_P(PSTR(" Frame: "));
@@ -406,6 +408,19 @@ static void cmdTestFunction(void)
  
 #ifdef HW_AVRDA
       
+    
+    // VALVE
+    // valve {open|close}
+    //       {enable|ctl} {on|off}
+    if (!strcmp_P( strupr(argv[1]), PSTR("VALVE"))  ) {
+        if ( test_valve(argv[2], argv[3]) ) {
+            pv_snprintfP_OK();
+        } else {
+            pv_snprintfP_ERR();
+        }
+        return;
+    }
+    
     // RS485A
     if (!strcmp_P( strupr(argv[1]), PSTR("RS485A"))  ) {
         if (!strcmp_P( strupr(argv[2]), PSTR("WRITE"))  ) {

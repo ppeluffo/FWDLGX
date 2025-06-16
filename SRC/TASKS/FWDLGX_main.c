@@ -9,10 +9,28 @@
  * crear un projecto con todos los perifericos que usemos y bajar el codigo
  * para ver como se inicializan y se manejan.
  *
+ * https://www.professordan.com/avr/techlib/techlib8/appnotes/
+ * 
  * FUSES:
  * avrdude -px256a3b -cavrispmkII -Pusb -p x256a3b -V -u -Ufuse0:w:0xff:m -Ufuse1:w:0xa:m -Ufuse2:w:0xfd:m -Ufuse4:w:0xf5:m -Ufuse5:w:0xd4:m
  * FIRMWARE
  * avrdude -v -Pusb -c avrispmkII -p x256a3 -F -e -U flash:w:FWDLGX.X.production.hex
+ * 
+ * -----------------------------------------------------------------------------
+ * Version 1.0.3 @ 20250528
+ * Vemos que el equipo se resetea sin razon.
+ * Luego de analizarlo encontramos que el problema es cuando entra en modo tickless.
+ * Si no habilitamos este modo, NO SE RESETEA.
+ * Luego de probar con el firmware TESTFWX encontramos que el problema esta en el 
+ * modo sleep nativo (tickless=1).
+ * Lo modificamos y lo ponemos como (tickless=2)
+ * - porthardware.h
+ * - port_DX.c
+ * - FWDLGX_utils.c
+ * 
+ * En la arquitectura SPX no funciona aún.
+ * Incorporamos un #define TESTING_MODEM para poder probar los tiempos usados en la wan.
+ * En idle_task ponemos un contador de 32 bits (rtcounter) para medir el tiempo con exactitud.
  * 
  * -----------------------------------------------------------------------------
  * Version 1.0.2 @ 20250421
@@ -275,6 +293,8 @@ uint8_t i;
 	RSTCTRL.RSTFR = 0xFF;
 #endif
     
+//    rtcounter = 0;
+    
     // Init out of rtos !!!
     system_init();
     
@@ -380,3 +400,14 @@ void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
       configTIMER_TASK_STACK_DEPTH is specified in words, not bytes. */
     *puxTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
 }
+//------------------------------------------------------------------------------
+/*
+void vApplicationIdleHook( void )
+{
+
+    rtcounter++;
+    
+}
+*/
+        
+//------------------------------------------------------------------------------

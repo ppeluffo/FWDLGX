@@ -39,10 +39,9 @@ t_valve_status valve_status;
 #define VALVE_CTRL_PIN_bp     PIN3_bp
     
 #define SET_CTL_VALVE()   ( VALVE_CTRL_PORT.OUT |= VALVE_CTRL_PIN_bm )
-#define RESET_CTL_VALVE() ( VALVE_CTRL_PORT.OUT &= ~VALVE_CTRL_PIN_bm )
+#define CLEAR_CTL_VALVE() ( VALVE_CTRL_PORT.OUT &= ~VALVE_CTRL_PIN_bm )
 
-void VALVE_EN_init(void);
-void VALVE_CTRL_init(void);;
+
 void VALVE_init(void);
 t_valve_status get_valve_status(void);
 bool VALVE_open(void);

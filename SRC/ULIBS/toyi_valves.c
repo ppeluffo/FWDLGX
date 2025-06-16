@@ -2,31 +2,21 @@
 #include "toyi_valves.h"
 
 // -----------------------------------------------------------------------------
-void VALVE_EN_init(void)
-{
-    // Configura el pin como output
-	VALVE_EN_PORT.DIR |= VALVE_EN_PIN_bm;	
-
-}
-// -----------------------------------------------------------------------------
-void VALVE_CTRL_init(void)
-{
-    // Configura el pin como output
-	VALVE_CTRL_PORT.DIR |= VALVE_CTRL_PIN_bm;	
-   
-
-}
-// -----------------------------------------------------------------------------
 void VALVE_init(void)
 {
-    VALVE_EN_init();
-    //VALVE_CTRL_init();
+#ifdef HW_AVRDA
+    
+    VALVE_EN_PORT.DIR |= VALVE_EN_PIN_bm;	
+    VALVE_CTRL_PORT.DIR |= VALVE_CTRL_PIN_bm;	
     
     // La dejo en modo low-power
     DISABLE_VALVE();
     //ENABLE_VALVE();
-    //RESET_CTL_VALVE();
+    CLEAR_CTL_VALVE();
     //SET_CTL_VALVE();
+
+#endif
+   
 }
 // -----------------------------------------------------------------------------
 t_valve_status get_valve_status(void)
@@ -37,15 +27,19 @@ t_valve_status get_valve_status(void)
 bool VALVE_open(void)
 {
     
+#ifdef HW_AVRDA
+    
     SET_CTL_VALVE();  // Open
     ENABLE_VALVE();
      
     vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
     DISABLE_VALVE();
-    RESET_CTL_VALVE();
-    valve_status = VALVE_OPEN;
+    CLEAR_CTL_VALVE();
     
+    valve_status = VALVE_OPEN;
     xprintf_P( PSTR("Valve: OPEN\r\n"));
+ 
+#endif
     
     return(true);
     
@@ -53,15 +47,21 @@ bool VALVE_open(void)
 // -----------------------------------------------------------------------------
 bool VALVE_close(void)
 {
-    RESET_CTL_VALVE(); // Close
+    
+#ifdef HW_AVRDA
+    
+    CLEAR_CTL_VALVE(); // Close
     ENABLE_VALVE();
     
     vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
     DISABLE_VALVE();
-    RESET_CTL_VALVE();
-    valve_status = VALVE_CLOSE;
+    CLEAR_CTL_VALVE();
     
+    valve_status = VALVE_CLOSE;
     xprintf_P( PSTR("Valve: CLOSE\r\n"));
+   
+#endif
+    
     return(true);
 }
 //-----------------------------------------------------------------------------
@@ -85,7 +85,9 @@ bool test_valve( char *param1, char *param2)
      {enable|ctl} {on|off}
      * 
      */
-
+    
+#ifdef HW_AVRDA
+    
     if (!strcmp_P( strupr(param1), PSTR("OPEN"))  ) {
         VALVE_open();
         return (true);
@@ -115,11 +117,14 @@ bool test_valve( char *param1, char *param2)
             return (true);
         }
         if (!strcmp_P( strupr(param2), PSTR("OFF"))  ) {
-            RESET_CTL_VALVE();
+            CLEAR_CTL_VALVE();
             return (true);
         }
         return(false);
     }
 
     return(false);
+    
+#endif
+    
 }

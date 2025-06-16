@@ -100,8 +100,13 @@ void tkWan(void * pvParameters)
     SYSTEM_EXIT_CRITICAL();
     
     sem_WAN = xSemaphoreCreateMutexStatic( &WAN_xMutexBuffer );
+   
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: Starting tkWan..\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("Starting tkWan..\r\n"));
+#endif
     
-    xprintf_P(PSTR("Starting tkWan..\r\n" ));
     vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     
     wan_state = WAN_APAGADO;
@@ -147,7 +152,12 @@ uint32_t waiting_secs;
     
     u_kick_wdt(TK_WAN, T120S);
     
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: State APAGADO\r\n"), RTC_logprint(true));
+#else
     xprintf_P(PSTR("WAN:: State APAGADO\r\n"));
+#endif
+    
     // Siempre al entrar debo apagar el modem.
     wan_apagar_modem();
     vTaskDelay( ( TickType_t)( 5000 / portTICK_PERIOD_MS ) );
@@ -211,8 +221,12 @@ bool retS = false;
 //    xprintf_P(PSTR("STACK offline_in = %d\r\n"), uxHighWaterMark );
     
     u_kick_wdt(TK_WAN, T120S);
-    
+   
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: State OFFLINE\r\n"), RTC_logprint(true));
+#else
     xprintf_P(PSTR("WAN:: State OFFLINE\r\n"));
+#endif
     
     // Entro en modo AT
     for (i=0; i<3; i++) {
@@ -231,7 +245,7 @@ bool retS = false;
     
     
     // Estoy en modo AT
-    if ( ! modem_check_and_reconfig(true, &save_dlg_config) ) {
+    if ( ! modem_check_and_reconfig(true, save_dlg_config) ) {
         /*
          * EL chequeo de la configuracion del modem indica que algo anda mal
          * y no puede seguir.
@@ -281,8 +295,12 @@ int8_t rsp = -1;
 
     u_kick_wdt(TK_WAN, T120S);
     
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: State ONLINE_CONFIG\r\n"), RTC_logprint(true));
+#else
     xprintf_P(PSTR("WAN:: State ONLINE_CONFIG\r\n"));
-   
+#endif
+    
     if ( wan_process_frame_recoverId() == -1 ) {
        
         // Espero 1H y reintento.
@@ -362,7 +380,11 @@ bool res;
 
     u_kick_wdt(TK_WAN, T120S);
 
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: State ONLINE_DATA\r\n"),RTC_logprint(true));
+#else
     xprintf_P(PSTR("WAN:: State ONLINE_DATA\r\n"));
+#endif
     
     link_up4data = true;
    
@@ -419,7 +441,11 @@ uint16_t tryes;
 uint16_t timeout;
 bool retS = false;
 
-    xprintf_P(PSTR("WAN:: LINK.\r\n"));
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: State LINK\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: State LINK\r\n"));
+#endif
  
     // Armo el frame
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
@@ -462,7 +488,14 @@ exit_:
 //------------------------------------------------------------------------------
 static bool wan_process_rsp_ping(void)
 {
-    xprintf_P(PSTR("WAN:: Link up.\r\n"));
+
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: Link up\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: Link up\r\n"));
+#endif
+ 
+    
     return(true);
 }
 //------------------------------------------------------------------------------
@@ -477,8 +510,12 @@ uint8_t tryes = 0;
 uint8_t timeout = 0;
 int8_t ret = -1;
 
-    xprintf_P(PSTR("WAN:: RECOVERID.\r\n"));
-
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: RECOVERID\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: RECOVERID\r\n"));
+#endif
+    
     // Si el nombre es diferente de DEFAULT no tengo que hacer nada
     if ( strcmp_P( strupr( base_conf.dlgid ), PSTR("DEFAULT")) != 0 ) {
         xprintf_P(PSTR("WAN:: RECOVERID OK.\r\n"));
@@ -585,8 +622,12 @@ uint8_t tryes = 0;
 uint8_t timeout = 0;
 int8_t ret = -1;
 uint8_t hash = 0;
-
-    xprintf_P(PSTR("WAN:: CONFIG_BASE.\r\n"));   
+  
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: CONFIG_BASE\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: CONFIG_BASE\r\n"));
+#endif
     
     // Armo el buffer
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
@@ -773,8 +814,12 @@ uint8_t timeout = 0;
 int8_t ret = -1;
 uint8_t hash = 0;
 
-    xprintf_P(PSTR("WAN:: CONFIG_AINPUTS.\r\n"));
- 
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: CONFIG_AINPUTS\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: CONFIG_AINPUTS\r\n"));
+#endif
+    
     // Armo el buffer
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
         vTaskDelay( ( TickType_t)( 1 ) );
@@ -904,7 +949,11 @@ uint8_t timeout = 0;
 int8_t ret = -1;
 uint8_t hash = 0;
 
-    xprintf_P(PSTR("WAN:: CONFIG_COUNTERS.\r\n"));
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: CONFIG_COUNTERS\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: CONFIG_COUNTERS\r\n"));
+#endif
     
     // Armo el buffer
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
@@ -1031,8 +1080,12 @@ uint8_t timeout = 0;
 int8_t ret = -1;
 uint8_t hash = 0;
 
-    xprintf_P(PSTR("WAN:: CONFIG_MODBUS.\r\n"));
- 
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: CONFIG_MODBUS\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: CONFIG_MODBUS\r\n"));
+#endif
+    
     // Armo el buffer
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
         vTaskDelay( ( TickType_t)( 1 ) );
@@ -1214,8 +1267,12 @@ uint8_t timeout = 0;
 int8_t ret = -1;
 uint8_t hash = 0;
 
-    xprintf_P(PSTR("WAN:: CONFIG_CONSIGNA.\r\n"));
- 
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: CONFIG_CONSIGNA\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: CONFIG_CONSIGNA\r\n"));
+#endif
+    
     // Armo el buffer
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
         vTaskDelay( ( TickType_t)( 1 ) );
@@ -1390,9 +1447,12 @@ uint8_t tryes = 0;
 uint8_t timeout = 0;
 bool retS = false;
 
-
-    xprintf_P(PSTR("WAN:: DATA.\r\n"));
-
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: DATA\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: DATA\r\n"));
+#endif
+    
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
         vTaskDelay( ( TickType_t)( 1 ) );
     
@@ -1498,6 +1558,7 @@ char *stringp = NULL;
 char *token = NULL;
 char *delim = "&,;:=><";
 char *p;
+BaseType_t xHigherPriorityTaskWoken = pdTRUE;
 
     p = MODEM_get_buffer_ptr();
     //p = lBchar_get_buffer(&wan_rx_lbuffer);
@@ -1530,23 +1591,26 @@ char *p;
         reset();
     }
     
+    if ( strstr( p, "VOPEN") != NULL ) {
+        xprintf_P(PSTR("WAN:: OPEN VALVE from server !!\r\n"));
+        xTaskNotify( xHandle_tkCtlPres, SIGNAL_OPEN_VALVE, eSetBits );
+        vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+        //VALVE_open();
+    }
+
+    if ( strstr( p, "VCLOSE") != NULL ) {
+        xprintf_P(PSTR("WAN:: CLOSE VALVE from server !!\r\n"));
+        xTaskNotify( xHandle_tkCtlPres, SIGNAL_CLOSE_VALVE, eSetBits );
+        vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+        //VALVE_close();
+    }
+    
+    
 /*   
  *      if ( strstr( p, "RESMEM") != NULL ) {
         xprintf_P(PSTR("WAN:: RESET MEMORY order from Server !!\r\n"));
         vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
         u_reset_memory_remote();
-    }
-
-    if ( strstr( p, "VOPEN") != NULL ) {
-        xprintf_P(PSTR("WAN:: OPEN VALVE from server !!\r\n"));
-        vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
-        VALVE_open();
-    }
-
-    if ( strstr( p, "VCLOSE") != NULL ) {
-        xprintf_P(PSTR("WAN:: CLOSE VALVE from server !!\r\n"));
-        vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
-        VALVE_close();
     }
 
     if ( strstr( p, "PILOTO") != NULL ) {
@@ -1578,7 +1642,13 @@ static void wan_xmit_out(void )
     // Antes de trasmitir siempre borramos el Rxbuffer
     //lBchar_Flush(&wan_rx_lbuffer);
     
+    
+#ifdef TESTING_MODEM
+    xfprintf_P( fdTERM, PSTR("Xmit->::<%s>: %s\r\n"), RTC_logprint(true), &wan_tx_buffer);
+#else
     xfprintf_P( fdTERM, PSTR("Xmit-> %s\r\n"), &wan_tx_buffer);
+#endif
+    
     
     MODEM_flush_rx_buffer();
     //xfprintf_P( fdWAN, PSTR("%s"), wan_tx_buffer); 

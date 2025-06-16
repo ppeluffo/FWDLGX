@@ -83,6 +83,14 @@ extern "C" {
 #include "toyi_valves.h"
 #include "consignas.h"
 
+/*
+ * Este define lo usamos para poner logs en la parte del modem que nos 
+ * sirva para hacer mediciones.
+ */
+#define TESTING_MODEM
+
+//uint32_t rtcounter;
+
 #ifdef HW_XMEGA
 
     #ifndef F_CPU
@@ -119,8 +127,8 @@ extern "C" {
       
 #define FW_TYPE "FWDLGX"
 #define FW_REV "1.0.3"
-#define FW_DATE "@ 20250422"
-#define FRTOS_VERSION "FW:FreeRTOS 202212.01"
+#define FW_DATE "@ 20250616"
+#define FRTOS_VERSION "FW: FreeRTOS 202212.01"
 
 #define pdSECS_TO_TICKS(xTimeInSecs) ((TickType_t)(((uint32_t)(xTimeInSecs) * (uint32_t)configTICK_RATE_HZ) ))
 #define pdTICS_TO_SECS(xTimeInTicks) ((TickType_t)(((uint32_t)(xTimeInTicks) / (uint32_t)configTICK_RATE_HZ) ))
@@ -190,6 +198,7 @@ typedef struct {
     RtcTimeType_t  rtc;	   
 } dataRcd_s;
 
+
 bool u_config_debug( char *tipo, char *valor);
 void u_config_default( char *modo );
 bool u_save_config_in_NVM(void);
@@ -198,6 +207,7 @@ dataRcd_s *get_dataRcd_ptr(void);
 bool u_poll_data(dataRcd_s *dataRcd);
 void u_xprint_dr(dataRcd_s *dr);
 void u_print_tasks_running(void);
+void debug_print_regs(void);
 
 bool WAN_process_data_rcd( dataRcd_s *dataRcd);
 void WAN_print_configuration(void);
@@ -206,6 +216,8 @@ bool WAN_read_debug(void);
 
 // Mensajes entre tareas
 #define SIGNAL_FRAME_READY		0x01
+#define SIGNAL_OPEN_VALVE		0x02
+#define SIGNAL_CLOSE_VALVE		0x03
 
 //------------------------------------------------------------------------------
 // Task running & watchdogs

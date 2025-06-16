@@ -7,10 +7,15 @@
 
 #include "FWDLGX.h"
 #include "pines.h"
+#include <avr/io.h>
 
 //------------------------------------------------------------------------------
 int8_t WDT_init(void);
 int8_t CLKCTRL_init(void);
+void RTC32_INIT(void);
+
+void ClockSystem_ConfigureMainClock(void);
+void RTC_ConfigureClock(void);
 
 //-----------------------------------------------------------------------------
 void system_init(void)
@@ -41,6 +46,23 @@ void system_init(void)
     CLEAR_EN_SENS3V3();
     CLEAR_EN_SENS12V();
     CLEAR_PWR_SENSORS();
+    
+    VALVE_init();
+    
+#ifdef HW_XMEGA
+    //RTC32_INIT();
+    // Configuro D0 (XBEE_SLEEP) para que indique el tickless
+    PORTD.DIR |= PIN0_bm;
+    PORTD.OUT |= PIN0_bm;
+
+#endif
+    
+#ifdef HW_AVRDA
+    // Configuro C0 para que indique el tickless
+    PORTC.DIR |= PIN0_bm;
+    PORTC.OUT |= PIN0_bm;
+#endif
+    
 }
 //-----------------------------------------------------------------------------
 int8_t WDT_init(void)
@@ -55,33 +77,54 @@ int8_t WDT_init(void)
 	return 0;
 }
 //-----------------------------------------------------------------------------
-int8_t CLKCTRL_init(void)
+void ClockSystem_ConfigureMainClock(void)
 {
-	// Configuro el clock para 24Mhz
-	
-#ifdef HW_AVRDA
+     /*
+     * El AVR128DA64 arranca por defecto con el oscilador interno de HF a 4Mhz
+     * Debemos configurar el oscilador de 24 MHz (osc24M) como 
+     * fuente principal sin prescaler.
+      * 
+      * 
+     */
     
-	ccp_write_io((void *)&(CLKCTRL.OSCHFCTRLA), CLKCTRL_FRQSEL_24M_gc         /* 24 */
-                                                
-	| 0 << CLKCTRL_AUTOTUNE_bp /* Auto-Tune enable: disabled */
-	| 0 << CLKCTRL_RUNSTDBY_bp /* Run standby: disabled */);
+#ifdef HW_AVRDA  
 
-	// ccp_write_io((void*)&(CLKCTRL.MCLKCTRLA),CLKCTRL_CLKSEL_OSCHF_gc /* Internal high-frequency oscillator */
-	//		 | 0 << CLKCTRL_CLKOUT_bp /* System clock out: disabled */);
+    // En MCLMCTRL escribimos la fuente de clock: OSCHF ( x defecto )
+    // 1. Seleccionar OSC24M como fuente del reloj principal (CPU)
+    _PROTECTED_WRITE(CLKCTRL.MCLKCTRLA, CLKCTRL_CLKSEL_OSCHF_gc);
 
-	// ccp_write_io((void*)&(CLKCTRL.MCLKLOCK),0 << CLKCTRL_LOCKEN_bp /* lock enable: disabled */);
+    // 2. Desactivar el divisor de reloj: no usamos PRESCALER
+    _PROTECTED_WRITE(CLKCTRL.MCLKCTRLB, 0);  // División 1 (sin división)
 
+    // En OSCHFCTRLA configuramos para que corra a 24 Mhz
+    // RUNSTBY no interesa porque nuestro modo de sleep va a ser Power-dowm
+    // AUTOTUNE no nos interesa
+    // 3. Habilitar el oscilador interno de 24 MHz
+   _PROTECTED_WRITE(
+           CLKCTRL.OSCHFCTRLA, CLKCTRL_FRQSEL_24M_gc    /* 24 Mhz */ 
+           | 0 << CLKCTRL_AUTOTUNE_bp /* Auto-Tune enable: disabled */
+           | 0 << CLKCTRL_RUNSTDBY_bp /* Run standby: disabled */
+           );
+
+    // 4. Esperar a que esté listo (OSCHF = 1 indica que el clock esta estable)
+    while (!(CLKCTRL.MCLKSTATUS & CLKCTRL_OSCHFS_bm));
+
+
+    // (Opcional) Deshabilita otras fuentes si no las usas, por ahorro de energía
+    
 #endif
     
 #ifdef HW_XMEGA
-    
+    /*
+     * En los XMEGA debo primero seleccionar el clock_source y luego configurarlo.
+     */
 #if SYSMAINCLK == 32
 	// Habilito el oscilador de 32Mhz
 	OSC.CTRL |= OSC_RC32MEN_bm;
-
-	// Espero que este estable
+    
+	// Espero que el OSC de 32Mhz este estable
 	do {} while ( (OSC.STATUS & OSC_RC32MRDY_bm) == 0 );
-
+   
 	// Seteo el clock para que use el oscilador de 32Mhz.
 	// Uso la funcion CCPWrite porque hay que se cuidadoso al tocar estos
 	// registros que son protegidos.
@@ -89,10 +132,76 @@ int8_t CLKCTRL_init(void)
 	//
 	// El prescaler A ( CLK.PSCCTRL ), B y C ( PSBCDIV ) los dejo en 0 de modo que no
 	// hago division y con esto tengo un clk_per = clk_sys. ( 32 Mhz ).
-	//
+	//   
 #endif
     
 #endif
+}
+//-----------------------------------------------------------------------------
+void RTC_ConfigureClock(void)
+{
+    
+#ifdef HW_AVRDA
+    
+    _PROTECTED_WRITE(CLKCTRL.OSC32KCTRLA, (1 << CLKCTRL_RUNSTDBY_bp) );  // Habilita OSC32K
+
+    // 2. Esperar a que esté listo
+    while (!(CLKCTRL.MCLKSTATUS & CLKCTRL_OSC32KS_bm));
+
+
+    while( RTC.STATUS > 0 ) {; }      
+    
+    // 3. Seleccionar OSC32K como fuente del RTC
+    RTC.CLKSEL = RTC_CLKSEL_OSC32K_gc;
+    
+    RTC.PITCTRLA = 0;  // Asegúrate que PIT esté apagado
+    RTC.PER = 0xFFFF;                                                       
+    RTC.CMP = 0x100;                                                       
+    RTC.CNT = 0;                                                            
+    RTC.INTFLAGS = RTC_CMP_bm;  
+    RTC.INTCTRL = RTC_CMP_bm; 
+    
+    // OJO QUE ASI NO PRENDE !!
+    //RTC.CTRLA = RTC_PRESCALER_DIV1_gc | RTC_RUNSTDBY_bm  ;  // Cuento a 8192Hz.
+    //RTC.INTCTRL = 0;  /* Deshabilito las interrupciones */ 
+    //RTC.CTRLA = RTC.CTRLA | ( 1<< RTC_RTCEN_bp);
+    RTC.CTRLA = RTC_RUNSTDBY_bm | RTC_PRESCALER_DIV4_gc;
+    //RTC.CTRLA = RTC_RUNSTDBY_bm | RTC_PRESCALER_DIV4_gc | RTC_RTCEN_bm ;    
+
+    
+#endif
+    
+#ifdef HW_XMEGA
+    
+ 	// El RTC32 lo utilizo para desperarme en el modo tickless.
+	// V-bat needs to be reset, and activated
+	VBAT.CTRL |= VBAT_ACCEN_bm;
+	// Este registro esta protegido de escritura con CCP.
+	CCPWrite(&VBAT.CTRL, VBAT_RESET_bm);
+    
+    // Enable the failure detection.
+	VBAT.CTRL |= VBAT_XOSCFDEN_bm;
+    /* A delay is needed to give the voltage in the backup system some time
+	 * to stabilise.
+	 */
+	delay_us(200);
+    
+	// Pongo el reloj en 1.024Khz.
+    VBAT.CTRL |= VBAT_XOSCEN_bm | VBAT_XOSCSEL_bm;
+
+	// Wait for stable oscillator
+	while(!(VBAT.STATUS & VBAT_XOSCRDY_bm));
+    
+    
+#endif
+    
+    
+}
+//-----------------------------------------------------------------------------
+int8_t CLKCTRL_init(void)
+{
+    ClockSystem_ConfigureMainClock();    
+    RTC_ConfigureClock(); 
     
 	return 0;
 }
@@ -469,3 +578,28 @@ void u_print_tasks_running(void)
     
 }
 //------------------------------------------------------------------------------
+void debug_print_regs(void)
+{
+uint32_t count, per;
+    
+#ifdef HW_XMEGA
+    xprintf_P(PSTR("CLK.RTCCTRL=0x%02x\r\n"), CLK.RTCCTRL);
+    xprintf_P(PSTR("OSC.CTRL=0x%02x\r\n"), OSC.CTRL);
+    xprintf_P(PSTR("CLK.CTRL=0x%02x\r\n"), CLK.CTRL);
+    xprintf_P(PSTR("VBAT.CTRL=0x%02x\r\n"), VBAT.CTRL);
+    xprintf_P(PSTR("VBAT.STATUS=0x%02x\r\n"), VBAT.STATUS);
+    xprintf_P(PSTR("RTC32.CTRL=0x%02x\r\n"), RTC32.CTRL);
+    xprintf_P(PSTR("RTC32.INTCTRL=0x%02x\r\n"), RTC32.INTCTRL);
+    xprintf_P(PSTR("RTC32.INTFLAGS=0x%02x\r\n"), RTC32.INTFLAGS);
+    
+    while (RTC32_SyncCntBusy());
+    count = RTC32.CNT;
+    per = RTC32.PER;
+ 
+    xprintf_P(PSTR("RTC32.CNT=%lu\r\n"), count);
+    xprintf_P(PSTR("RTC32.PER=%lu\r\n"), per);
+#endif
+    
+}
+//------------------------------------------------------------------------------
+//
