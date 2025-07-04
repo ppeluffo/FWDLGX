@@ -15,6 +15,20 @@
  * avrdude -px256a3b -cavrispmkII -Pusb -p x256a3b -V -u -Ufuse0:w:0xff:m -Ufuse1:w:0xa:m -Ufuse2:w:0xfd:m -Ufuse4:w:0xf5:m -Ufuse5:w:0xd4:m
  * FIRMWARE
  * avrdude -v -Pusb -c avrispmkII -p x256a3 -F -e -U flash:w:FWDLGX.X.production.hex
+ *
+ * -----------------------------------------------------------------------------
+ * Version 1.1.0 @ 20250625
+ * A) En los pwr_modo_t agrego uno nuevo que es RTU.
+ * En este caso el datalogger NO almacena datos en memoria sino que solo si
+ * hay enlace lo transmite.
+ * Esto es para los equipos que estan en tanques como esclavos de los PLC que no tiene
+ * sentido que guarden datos. 
+ * B) Acelero el proceso de conexion y envio de datos.
+ *    Elimino modem_check_and_reconfig()
+ *    Mando un frame inicial con CONFIG_ALL con todos los hashes
+ * C) Los datos los mando en modo bulk hasta 10 frames juntos
+ *    La idea es crear una clase DATANR de frame que no pida respuesta y otra que si
+ *    Esto es porque el modem fragmenta entonces hay que mandar de un saque.
  * 
  * -----------------------------------------------------------------------------
  * Version 1.0.3 @ 20250528

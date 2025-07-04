@@ -47,6 +47,9 @@ uint16_t hh, mm;
             mm = (uint8_t)(base_conf.pwr_hhmm_off % 100);
             xprintf_P(PSTR("    inicio discreto -> %02d:%02d\r\n"), hh,mm);
             break;
+        case PWR_RTU:
+            xprintf_P(PSTR(" pwr_modo: (RTU) continuo\r\n"));
+            break;
     }
     
     xprintf_P(PSTR(" pwr_on:%d, pwr_off:%d\r\n"),base_conf.pwr_hhmm_on, base_conf.pwr_hhmm_off );
@@ -116,6 +119,11 @@ bool base_config_pwrmodo ( char *s_pwrmodo )
     
     if ((strcmp_P( strupr(s_pwrmodo), PSTR("MIXTO")) == 0) ) {
         base_conf.pwr_modo = PWR_MIXTO;
+        return(true);
+    }
+
+    if ((strcmp_P( strupr(s_pwrmodo), PSTR("RTU")) == 0) ) {
+        base_conf.pwr_modo = PWR_RTU;
         return(true);
     }
     

@@ -31,6 +31,17 @@ static bool wan_process_rsp_ping(void);
 static int8_t wan_process_frame_recoverId(void);
 static int8_t wan_process_rsp_recoverId(void);
 
+static int8_t wan_process_frame_configAll(void);
+static int8_t wan_process_rsp_configAll(void);
+
+struct {
+    bool conf_base;
+    bool conf_ainputs;
+    bool conf_counter;
+    bool conf_modbus;
+    bool conf_presion;
+} conf_all_flags;
+
 static int8_t wan_process_frame_configBase(void);
 static int8_t wan_process_rsp_configBase(void);
 static int8_t wan_process_frame_configAinputs(void);
@@ -43,8 +54,10 @@ static int8_t wan_process_frame_configConsigna(void);
 static int8_t wan_process_rsp_configConsigna(void);
 
 static bool wan_send_from_memory(void);
-static bool wan_process_frame_data(dataRcd_s *dr);
-static void wan_load_dr_in_txbuffer(dataRcd_s *dr, uint8_t *buff, uint16_t buffer_size );
+//static bool wan_bulk_send_from_memory(void);
+
+static bool wan_process_frame_data(dataRcd_s *dr, bool response);
+static void wan_load_dr_in_txbuffer(dataRcd_s *dr, uint8_t *buff, uint16_t buffer_size, bool response);
 
 static bool wan_process_rsp_data(void);
 
@@ -214,8 +227,8 @@ static void wan_state_offline(void)
  
 uint8_t i;
 bool atmode = false;
-bool save_dlg_config = false;
-bool retS = false;
+//bool save_dlg_config = false;
+//bool retS = false;
 
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
 //    xprintf_P(PSTR("STACK offline_in = %d\r\n"), uxHighWaterMark );
@@ -245,21 +258,28 @@ bool retS = false;
     
     
     // Estoy en modo AT
-    if ( ! modem_check_and_reconfig(true, save_dlg_config) ) {
+   
+// -----------------------------------------------------------------------------
+/*
+ * Elimino esto para acelerar el proceso 
+ */
+    //if ( ! modem_check_and_reconfig(true, save_dlg_config) ) {
         /*
          * EL chequeo de la configuracion del modem indica que algo anda mal
          * y no puede seguir.
          */
-        xprintf_P(PSTR("MODEM config ERROR. Reconfigure modem and datalogger. STOP\r\n"));
-        wan_state = WAN_APAGADO;
-        goto quit; 
-    }
+    //    xprintf_P(PSTR("MODEM config ERROR. Reconfigure modem and datalogger. STOP\r\n"));
+    //    wan_state = WAN_APAGADO;
+    //    goto quit; 
+    //}
     
-    if ( save_dlg_config ) {
-        u_save_config_in_NVM();
-    }
+    //if ( save_dlg_config ) {
+    //    u_save_config_in_NVM();
+    //}
     
-    vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+    //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+// -----------------------------------------------------------------------------
+
             
     // Leo el CSQ, IMEI, ICCID:
     modem_atcmd_read_iccid(true);
@@ -318,7 +338,7 @@ int8_t rsp = -1;
         
     }
    
-    rsp = wan_process_frame_configBase();
+    rsp = wan_process_frame_configAll();
     if (  rsp == -1 ) {
         // No puedo configurarse o porque el servidor no responde
         // o porque da errores. Espero 60mins.
@@ -330,29 +350,51 @@ int8_t rsp = -1;
         return;
     }
     
-    saveInMem += rsp;
-    
-    rsp = wan_process_frame_configAinputs(); 
-    if (rsp >= 0 ) {
+    if ( conf_all_flags.conf_base ) {
+        rsp = wan_process_frame_configBase();
+        if (  rsp == -1 ) {
+            // No puedo configurarse o porque el servidor no responde
+        // o porque da errores. Espero 60mins.
+            xprintf_P(PSTR("WAN:: Errores en configuracion. Espero 60mins..!!\r\n"));
+            base_conf.timerdial = 3600;
+            base_conf.timerpoll = 3600;
+            base_conf.pwr_modo = PWR_DISCRETO;
+            wan_state = WAN_APAGADO;
+            return;
+        }
         saveInMem += rsp;
     }
     
-    rsp = wan_process_frame_configCounters();
-    if (rsp >= 0 ) {
-        saveInMem += rsp;
+    if ( conf_all_flags.conf_ainputs ) {
+        rsp = wan_process_frame_configAinputs(); 
+        if (rsp >= 0 ) {
+            saveInMem += rsp;
+        }
+    }
+    
+    if ( conf_all_flags.conf_counter ) {
+        rsp = wan_process_frame_configCounters();
+        if (rsp >= 0 ) {
+            saveInMem += rsp;
+        }
     }
     
 #ifdef HW_AVRDA
-    rsp = wan_process_frame_configModbus();
-    if (rsp >= 0 ) {
-        saveInMem += rsp;
-    } 
     
-    rsp = wan_process_frame_configConsigna();
-    if (rsp >= 0 ) {
-        saveInMem += rsp;
-    } 
-        
+    if ( conf_all_flags.conf_modbus ) {
+        rsp = wan_process_frame_configModbus();
+        if (rsp >= 0 ) {
+            saveInMem += rsp;
+        } 
+    }
+    
+    if ( conf_all_flags.conf_presion ) {
+        rsp = wan_process_frame_configConsigna();
+        if (rsp >= 0 ) {
+            saveInMem += rsp;
+        } 
+    }
+    
 #endif
         
     if ( saveInMem > 0 ) {
@@ -394,6 +436,7 @@ bool res;
     xprintf_P(PSTR("WAN:: ONLINE: dump memory...\r\n"));  
     // Vacio la memoria.
     wan_send_from_memory();  
+    //wan_bulk_send_from_memory();
     // 
     // En modo discreto, apago y salgo
     if ( u_get_sleep_time(f_debug_comms) > 0 ) {
@@ -405,8 +448,8 @@ bool res;
     while( u_get_sleep_time(f_debug_comms) == 0 ) {
                       
         if ( drWanBuffer.dr_ready ) {
-            // Hay datos para transmitir
-            res =  wan_process_frame_data( &drWanBuffer.dr);
+            // Hay datos para transmitir. Transmito y espero respuesta
+            res =  wan_process_frame_data( &drWanBuffer.dr, true);
             if (res) {
                 drWanBuffer.dr_ready = false;
             } else {
@@ -602,6 +645,194 @@ int8_t ret = -1;
 	xprintf_P( PSTR("WAN:: Reconfig DLGID to %s\r\n\0"), base_conf.dlgid );
     ret = 1;
 	return(ret);
+}
+//------------------------------------------------------------------------------
+static int8_t wan_process_frame_configAll(void)
+{
+     /*
+      * Envo un frame con todos los hashes. El servidor me devuelve cual
+      * modulo debo reconfigurar.
+      * El server me puede mandar OK o la nueva configuracion que debo tomar.
+      * Lo reintento 2 veces
+      * 
+      * RET:
+      * -1: ERROR
+      *  0: No reconfiguration
+      * +1: reconfiguration
+      * 
+      */
+    
+uint8_t tryes = 0;
+uint8_t timeout = 0;
+int8_t ret = -1;
+uint8_t b_hash = 0; 
+uint8_t a_hash = 0;
+uint8_t c_hash = 0;
+uint8_t m_hash = 0;
+uint8_t p_hash = 0;
+
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: CONFIG_ALL\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: CONFIG_ALL\r\n"));
+#endif
+    
+    // Armo el buffer
+    while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
+        vTaskDelay( ( TickType_t)( 1 ) );
+    
+    memset(wan_tx_buffer, '\0', WAN_TX_BUFFER_SIZE);
+   
+    conf_all_flags.conf_base = false;
+    
+    b_hash = base_hash();  
+    a_hash = ainputs_hash();
+    c_hash = counter_hash();
+    m_hash = modbus_hash();
+    p_hash = consigna_hash();     
+    //snprintf( wan_tx_buffer, WAN_TX_BUFFER_SIZE,"ID=%s&TYPE=%s&VER=%s&CLASS=CONF_BASE&UID=%s&HASH=0x%02X", systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, NVM_signature2str(), hash );
+    snprintf( wan_tx_buffer, WAN_TX_BUFFER_SIZE,
+                        "ID=%s&HW=%s&TYPE=%s&VER=%s&CLASS=CONF_ALL&UID=%s&IMEI=%s&ICCID=%s&CSQ=%d&WDG=%d&BH=0x%02X&AH=0x%02X&CH=0x%02X&MH=0x%02X&PH=0x%02X", 
+                        base_conf.dlgid, 
+                        HW,
+                        FW_TYPE, 
+                        FW_REV, 
+                        NVM_signature2str(), 
+                        modem_atcmd_get_imei(),
+                        modem_atcmd_get_iccid(),
+                        modem_atcmd_get_csq(),
+                        wdg_resetCause,
+                        b_hash,
+                        a_hash,
+                        c_hash,
+                        m_hash,
+                        p_hash
+                        );
+   
+    // Proceso. Envio hasta 3 veces el frame y espero hasta 10s la respuesta
+    tryes = CONFIGBASE_TRYES;
+    while (tryes-- > 0) {
+        
+        // Transmito y espero la respuesta </html>
+        wan_xmit_out();  
+        // Espero respuesta chequeando cada 1s durante 10s.
+        timeout = 10;
+        while ( timeout-- > 0) {
+            vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+            if ( wan_check_response("</html>") ) {
+               
+                wan_print_RXbuffer();
+            
+                if ( wan_check_response("CONFIG=ERROR")) {
+                    xprintf_P(PSTR("WAN:: CONF_ALL ERROR: El servidor no reconoce al datalogger !!\r\n"));
+                    ret = -1;
+                    goto exit_;
+                }
+                
+                if ( wan_check_response("CONF_ALL&CONFIG=OK")) {
+                    ret = 0;
+                    goto exit_;
+                }
+                
+                if ( wan_check_response("CLASS=CONF_ALL")) {
+                    ret = wan_process_rsp_configAll();
+                    goto exit_;
+                } 
+            }
+        }
+    }
+    
+    // Expiro el tiempo sin respuesta del server.
+    xprintf_P(PSTR("WAN:: CONFIG_ALL ERROR: Timeout en server rsp.!!\r\n"));
+    ret = -1;
+    
+exit_:
+               
+    xSemaphoreGive( sem_WAN );
+    return(ret);   
+}
+//------------------------------------------------------------------------------
+static int8_t wan_process_rsp_configAll(void)
+{
+    /*
+     * Recibe la configuracion BASE.
+     * RXFRAME: <html><body><h1>CLASS=CONF_ALL&BASE&COUNTER&AINPUT&MODBUS&PRESION</h1></body></html>                        
+     *                          CLASS=CONF_ALL&CONFIG=OK
+     *
+     * RET:
+     * -1: ERROR
+     *  0: No reconfiguration
+     * +1: reconfiguration
+     *                           
+     */
+    
+//char *stringp = NULL;
+//char *token = NULL;
+//char *delim = "&,;:=><";
+//char *ts = NULL;
+bool ret = false;
+char *p;
+
+    p = MODEM_get_buffer_ptr();
+    //p = lBchar_get_buffer(&wan_rx_lbuffer);
+    
+    if  ( strstr( p, "CONFIG=OK") != NULL ) {
+        ret = true;
+        goto exit_;
+    }
+    
+    if  ( strstr( p, "FAIL") != NULL ) {
+        xprintf_P(PSTR("WAN:: CONF ERROR: El servidor no reconoce al frame !!\r\n"));
+        // Reconfiguro para espera 1h.!!!
+        xprintf_P(PSTR("WAN:: Reconfigurado para reintentar en 1H !!\r\n"));
+        base_conf.pwr_modo = PWR_DISCRETO;
+        base_conf.timerdial = 3600;
+        base_conf.timerpoll = 3600;
+        ret = false;
+        goto exit_; 
+    }
+     
+    if  ( strstr( p, "CONFIG=ERROR") != NULL ) {
+        xprintf_P(PSTR("WAN:: CONF ERROR: El servidor no reconoce al datalogger !!\r\n"));
+        // Reconfiguro para espera 1h.!!!
+        xprintf_P(PSTR("WAN:: Reconfigurado para reintentar en 1H !!\r\n"));
+        base_conf.pwr_modo = PWR_DISCRETO;
+        base_conf.timerdial = 3600;
+        base_conf.timerpoll = 3600;
+        ret = false;
+        goto exit_;    
+    }
+         
+    vTaskDelay( ( TickType_t)( 10 / portTICK_PERIOD_MS ) );
+	memset(tmpLocalStr,'\0',sizeof(tmpLocalStr));
+    
+    if  ( strstr( p, "BASE") != NULL ) { 
+        conf_all_flags.conf_base = true;
+    }
+    
+    if  ( strstr( p, "AINPUT") != NULL ) { 
+        conf_all_flags.conf_ainputs = true;
+    }
+    
+    if  ( strstr( p, "MODBUS") != NULL ) { 
+        conf_all_flags.conf_modbus = true;
+    }
+ 
+    if  ( strstr( p, "COUNTER") != NULL ) { 
+        conf_all_flags.conf_counter = true;
+    }
+    
+    if  ( strstr( p, "PRESION") != NULL ) { 
+        conf_all_flags.conf_presion = true;
+    }
+    
+
+    ret = true;
+    
+exit_:
+       
+    wdg_resetCause = 0x00;
+    return(ret);      
 }
 //------------------------------------------------------------------------------
 static int8_t wan_process_frame_configBase(void)
@@ -1401,6 +1632,64 @@ static bool wan_send_from_memory(void)
     
 dataRcd_s dr;
 bool retS = false;
+uint8_t frames_counter;
+
+    xprintf_P(PSTR("WAN:: Dump memory...\r\n"));
+    
+    FAT_read(&l_fat1);
+    xprintf_P( PSTR("WAN:: wrPtr=%d,rdPtr=%d,count=%d\r\n"), l_fat1.head, l_fat1.tail, l_fat1.count );
+    
+    // Mando Sin confirmacion
+    frames_counter = 1;
+    while ( l_fat1.count > 0 ) {
+        
+        u_kick_wdt(TK_WAN, T120S);
+        
+        xprintf_P( PSTR("WAN:: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat1.head, l_fat1.tail, l_fat1.count );
+        
+        if ( ! FS_readRcd( &dr, sizeof(dataRcd_s) ) ) {
+            goto quit;
+        }
+        
+        if ( ( frames_counter == 0 ) || ( l_fat1.count == 1) ) {
+            // Transmito y espero respuesta
+            retS = wan_process_frame_data(&dr, true);
+        } else {
+            // Transmito y no espero respuesta
+            retS = wan_process_frame_data(&dr, false);
+        }
+        if ( ! retS) {
+            goto quit;
+        }
+
+        if ( frames_counter++ == 10 ) {
+            frames_counter = 0;
+        }
+        
+        FAT_read(&l_fat1);
+    }
+    
+    
+quit:
+                
+    xprintf_P(PSTR("WAN:: Memory Empty\r\n"));
+    //FAT_flush();
+    
+    return (retS);
+
+
+}
+//------------------------------------------------------------------------------
+static bool wan_send_from_memory_001(void)
+{
+    /*
+     * Lee el FS y transmite los registros acumulados.
+     * Al recibir un OK los borra.
+     * Envia de a 1.
+     */
+    
+dataRcd_s dr;
+bool retS = false;
 
     xprintf_P(PSTR("WAN:: Dump memory...\r\n"));
     
@@ -1414,7 +1703,7 @@ bool retS = false;
         xprintf_P( PSTR("WAN:: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat1.head, l_fat1.tail, l_fat1.count );
         
         if ( FS_readRcd( &dr, sizeof(dataRcd_s) ) ) {
-            retS = wan_process_frame_data(&dr);
+            retS = wan_process_frame_data(&dr, true);
             if ( ! retS) {
                 goto quit;
             }
@@ -1435,57 +1724,75 @@ quit:
 
 }
 //------------------------------------------------------------------------------
-static bool wan_process_frame_data(dataRcd_s *dr)
+static bool wan_process_frame_data(dataRcd_s *dr, bool response)
 {
    /*
     * Armo el wan_tx_buffer.
     * Transmite los datos pasados en la estructura dataRcd por el
     * puerto definido como WAN
+    * Espero o no la respuesta
     */ 
 
 uint8_t tryes = 0;
 uint8_t timeout = 0;
 bool retS = false;
 
-#ifdef TESTING_MODEM
-    xprintf_P(PSTR("WAN::<%s>: DATA\r\n"), RTC_logprint(true));
+#ifdef TESTING_MODEM    
+    if (response) {
+        xprintf_P(PSTR("WAN::<%s>: DATA\r\n"), RTC_logprint(true));
+    } else {
+        xprintf_P(PSTR("WAN::<%s>: DATANR\r\n"), RTC_logprint(true));
+    }
 #else
-    xprintf_P(PSTR("WAN:: DATA\r\n"));
+    if (response) {
+        xprintf_P(PSTR("WAN:: DATA\r\n"));
+    } else {
+        xprintf_P(PSTR("WAN:: DATANR\r\n"));
+    }
 #endif
     
     while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
         vTaskDelay( ( TickType_t)( 1 ) );
     
     // Formateo(escribo) el dr en el wan_tx_buffer
-    wan_load_dr_in_txbuffer(dr, (uint8_t *)&wan_tx_buffer,WAN_TX_BUFFER_SIZE );
-    
-    // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = DATA_TRYES;
-    while (tryes-- > 0) {
+    wan_load_dr_in_txbuffer(dr, (uint8_t *)&wan_tx_buffer,WAN_TX_BUFFER_SIZE, response );
         
+    if ( response == false ) {
+        // Transmito y no espero respueta
         wan_xmit_out();
-        // Espero respuesta chequeando cada 1s durante 10s.
-        timeout = 10;
-        while ( timeout-- > 0) {
-            vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-            if ( wan_check_response("</html>") ) {
-               
-                wan_print_RXbuffer();
-           
-                if ( wan_check_response("CLASS=DATA")) {
-                    wan_process_rsp_data();
-                    retS = true;
-                    goto exit_;
-                }
-            }
-        }    
+        retS = true;
+        goto exit_;
         
-        xprintf_P(PSTR("WAN:: DATA RETRY\r\n"));       
-    }
+    } else {
+        
+        // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta   
+        tryes = DATA_TRYES;
+        while (tryes-- > 0) {
+        
+            wan_xmit_out();
+            // Espero respuesta chequeando cada 1s durante 10s.
+            timeout = 10;
+            while ( timeout-- > 0) {
+                vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+                if ( wan_check_response("</html>") ) {
+               
+                    wan_print_RXbuffer();
+           
+                    if ( wan_check_response("CLASS=DATA")) {
+                        wan_process_rsp_data();
+                        retS = true;
+                        goto exit_;
+                    }
+                }
+            }       
+        
+            xprintf_P(PSTR("WAN:: DATA RETRY\r\n"));       
+        }
  
-    // Expiro el tiempo sin respuesta del server.
-    xprintf_P(PSTR("WAN:: DATA ERROR: Timeout en server rsp.!!\r\n"));
-    retS = false;
+        // Expiro el tiempo sin respuesta del server.
+        xprintf_P(PSTR("WAN:: DATA ERROR: Timeout en server rsp.!!\r\n"));
+        retS = false;
+    }
     
 exit_:
 
@@ -1494,7 +1801,7 @@ exit_:
     
 }
 //------------------------------------------------------------------------------
-static void wan_load_dr_in_txbuffer(dataRcd_s *dr, uint8_t *buff, uint16_t buffer_size )
+static void wan_load_dr_in_txbuffer(dataRcd_s *dr, uint8_t *buff, uint16_t buffer_size, bool response)
 {
     /*
      * Toma un puntero a un dr y el wan_tx_buffer y escribe el dr en este
@@ -1508,8 +1815,11 @@ int16_t fptr;
    // Armo el buffer
     memset(buff, '\0', buffer_size);
     fptr = 0;
-    fptr = sprintf_P( (char *)&buff[fptr], PSTR("ID=%s&HW=%s&TYPE=%s&VER=%s&CLASS=DATA"), base_conf.dlgid, HW, FW_TYPE, FW_REV);   
-         
+    if (response) {
+        fptr = sprintf_P( (char *)&buff[fptr], PSTR("ID=%s&HW=%s&TYPE=%s&VER=%s&CLASS=DATA"), base_conf.dlgid, HW, FW_TYPE, FW_REV);   
+    } else {
+        fptr = sprintf_P( (char *)&buff[fptr], PSTR("ID=%s&HW=%s&TYPE=%s&VER=%s&CLASS=DATANR"), base_conf.dlgid, HW, FW_TYPE, FW_REV);  
+    } 
     // Clock
     fptr += sprintf_P( (char *)&buff[fptr], PSTR("&DATE=%02d%02d%02d"), dr->rtc.year,dr->rtc.month, dr->rtc.day );
     fptr += sprintf_P( (char *)&buff[fptr], PSTR("&TIME=%02d%02d%02d"), dr->rtc.hour,dr->rtc.min, dr->rtc.sec);
@@ -1558,7 +1868,7 @@ char *stringp = NULL;
 char *token = NULL;
 char *delim = "&,;:=><";
 char *p;
-BaseType_t xHigherPriorityTaskWoken = pdTRUE;
+//BaseType_t xHigherPriorityTaskWoken = pdTRUE;
 
     p = MODEM_get_buffer_ptr();
     //p = lBchar_get_buffer(&wan_rx_lbuffer);
@@ -1688,7 +1998,11 @@ char *p;
     p = MODEM_get_buffer_ptr();
     //p = lBchar_get_buffer(&wan_rx_lbuffer);
     //if (f_debug_comms) {
-        xprintf_P(PSTR("Rcvd-> %s\r\n"), p );
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("Rcvd::<%s> -> %s\r\n"),  RTC_logprint(true), p );
+#else
+    xprintf_P(PSTR("Rcvd-> %s\r\n"), p );    
+#endif
     //}
 }
 //------------------------------------------------------------------------------
@@ -1757,6 +2071,12 @@ fat_s l_fat;
 		}
         retS = true;
         
+    } else if (base_conf.pwr_modo == PWR_RTU ) {
+        /*
+         * No hay enlace: me voy, no guardo el dato.
+         */
+        retS = true;
+        
     } else {
         // Guardo en memoria
         xprintf_P(PSTR("WAN:: Save frame in EE.\r\n"));
@@ -1795,5 +2115,224 @@ void WAN_config_debug(bool debug )
 bool WAN_read_debug(void)
 {
     return (f_debug_comms);
+}
+//------------------------------------------------------------------------------
+// DEPRECATED
+
+static void __wan_state_online_config(void)
+{
+    /*
+     * Se encarga de la configuracion.
+     * Solo lo hace una sola vez por lo que tiene una flag estatica que
+     * indica si ya se configuro.
+     */
+  
+uint16_t i;
+int8_t saveInMem = 0;
+int8_t rsp = -1;
+
+    u_kick_wdt(TK_WAN, T120S);
+    
+#ifdef TESTING_MODEM
+    xprintf_P(PSTR("WAN::<%s>: State ONLINE_CONFIG\r\n"), RTC_logprint(true));
+#else
+    xprintf_P(PSTR("WAN:: State ONLINE_CONFIG\r\n"));
+#endif
+    
+    if ( wan_process_frame_recoverId() == -1 ) {
+       
+        // Espero 1H y reintento.
+        // Apago la tarea del system para no llenar la memoria al pedo
+        
+        vTaskSuspend( xHandle_tkSys );
+        xprintf_P(PSTR("WAN:: ERROR RECOVER ID:Espero 1 h.\r\n"));
+        for (i=0; i < 60; i++) {
+             vTaskDelay( ( TickType_t)( 60000 / portTICK_PERIOD_MS ) );
+             u_kick_wdt(TK_WAN, T120S);
+        }
+        
+        xprintf("Reset..\r\n");
+        reset();
+        
+    }
+   
+    rsp = wan_process_frame_configBase();
+    if (  rsp == -1 ) {
+        // No puedo configurarse o porque el servidor no responde
+        // o porque da errores. Espero 60mins.
+        xprintf_P(PSTR("WAN:: Errores en configuracion. Espero 60mins..!!\r\n"));
+        base_conf.timerdial = 3600;
+        base_conf.timerpoll = 3600;
+        base_conf.pwr_modo = PWR_DISCRETO;
+        wan_state = WAN_APAGADO;
+        return;
+    }
+    
+    saveInMem += rsp;
+    
+    rsp = wan_process_frame_configAinputs(); 
+    if (rsp >= 0 ) {
+        saveInMem += rsp;
+    }
+    
+    rsp = wan_process_frame_configCounters();
+    if (rsp >= 0 ) {
+        saveInMem += rsp;
+    }
+    
+#ifdef HW_AVRDA
+    rsp = wan_process_frame_configModbus();
+    if (rsp >= 0 ) {
+        saveInMem += rsp;
+    } 
+    
+    rsp = wan_process_frame_configConsigna();
+    if (rsp >= 0 ) {
+        saveInMem += rsp;
+    } 
+        
+#endif
+        
+    if ( saveInMem > 0 ) {
+        if ( ! u_save_config_in_NVM() ) {
+            xprintf_P(PSTR("WAN ERROR saving NVM !!!\r\n"));
+        }
+    }
+    
+    wan_state = WAN_ONLINE_DATA;
+    return;
+
+}
+//------------------------------------------------------------------------------
+static bool __wan_bulk_send_from_memory(void)
+{
+    /*
+     * Lee el FS y transmite los registros acumulados.
+     * Al recibir un OK los borra.
+     * Envia de a 1.
+     */
+    
+dataRcd_s dr;
+bool retS = false;
+uint8_t frames_counter;
+int16_t fptr;
+uint16_t total_bytes;
+uint8_t i;
+uint8_t timeout = 0;
+
+    xprintf_P(PSTR("WAN:: Bulk send...\r\n"));
+    
+    while ( xSemaphoreTake( sem_WAN, MSTOTAKEWANSEMPH ) != pdTRUE )
+    vTaskDelay( ( TickType_t)( 1 ) );
+    
+    FAT_read(&l_fat1);
+    xprintf_P( PSTR("WAN:: wrPtr=%d,rdPtr=%d,count=%d\r\n"), l_fat1.head, l_fat1.tail, l_fat1.count );
+    if ( l_fat1.count <= 0 ) {
+        // No hay datos en memoria para transmitir
+        goto quit;
+    }
+    
+    frames_counter = 0;
+    // Send HEADER
+    total_bytes = 0;
+    memset((uint8_t *)&wan_tx_buffer, '\0', WAN_TX_BUFFER_SIZE);
+    fptr = 0;
+    fptr = sprintf_P( (char *)&wan_tx_buffer[fptr], PSTR("ID=%s&HW=%s&TYPE=%s&VER=%s&CLASS=DBULK"), base_conf.dlgid, HW, FW_TYPE, FW_REV);   
+    total_bytes += fptr;
+    wan_xmit_out();
+      
+    // Send PAYLOAD
+    while(1) {
+
+        u_kick_wdt(TK_WAN, T120S);  
+        xprintf_P( PSTR("WAN:: ctl=%d, wrPtr=%d,rdPtr=%d,count=%d\r\n"),frames_counter, l_fat1.head, l_fat1.tail, l_fat1.count );
+        // Leo un reg.de memoria
+        if ( ! FS_readRcd( &dr, sizeof(dataRcd_s) ) ) {
+            goto quit;
+        }
+        // Guardo el dataRecord en el txBuffer
+        memset((uint8_t *)&wan_tx_buffer, '\0', WAN_TX_BUFFER_SIZE);
+        fptr = 0;
+        fptr = sprintf_P( (char *)&wan_tx_buffer[fptr], PSTR("CTL=%d"), frames_counter );     
+        // Clock
+        fptr += sprintf_P( (char *)&wan_tx_buffer[fptr], PSTR("&DATE=%02d%02d%02d"), dr.rtc.year,dr.rtc.month, dr.rtc.day );
+        fptr += sprintf_P( (char *)&wan_tx_buffer[fptr], PSTR("&TIME=%02d%02d%02d"), dr.rtc.hour,dr.rtc.min, dr.rtc.sec);
+    
+        // Analog Channels:
+        for ( i=0; i < NRO_ANALOG_CHANNELS; i++) {
+            if ( ainputs_conf.channel[i].enabled ) {
+                fptr += sprintf_P( (char*)&wan_tx_buffer[fptr], PSTR("&%s=%0.2f"), ainputs_conf.channel[i].name, dr.ainputs[i]);
+            }
+        }
+        
+        // Counter:
+        if ( counter_conf.enabled ) {
+            fptr += sprintf_P( (char*)&wan_tx_buffer[fptr], PSTR("&%s=%0.3f"), counter_conf.name, dr.contador);
+        }
+    
+#ifdef HW_AVRDA
+        // Modbus Channels:
+        if (modbus_conf.enabled) {
+            for ( i=0; i < NRO_MODBUS_CHANNELS; i++) {
+                if (  modbus_conf.mbch[i].enabled ) {
+                    fptr += sprintf_P( (char*)&wan_tx_buffer[fptr], PSTR("&%s=%0.3f"), modbus_conf.mbch[i].name, dr.modbus[i]);
+                }
+            }
+        }
+#endif
+    
+        // Battery
+        fptr += sprintf_P( (char*)&wan_tx_buffer[fptr], PSTR("&bt3v3=%0.3f"), dr.bt3v3);
+        fptr += sprintf_P( (char*)&wan_tx_buffer[fptr], PSTR("&bt12v=%0.3f"), dr.bt12v);
+    
+        // Envio
+        wan_xmit_out();
+        
+        total_bytes += fptr;
+        frames_counter++;
+        FAT_read(&l_fat1);
+        
+        // Condiciones de salida
+        if (frames_counter > 5) {
+            goto quit;
+        }
+        
+        if ( l_fat1.count <= 0 ) {
+            goto quit;
+        }
+        
+        if ( total_bytes > 2048 ) {
+            goto quit;
+        }
+    }
+     
+    // Espero respuesta chequeando cada 1s durante 10s.
+    timeout = 10;
+    while ( timeout-- > 0) {
+        vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+        if ( wan_check_response("</html>") ) {
+               
+            wan_print_RXbuffer();
+           
+            if ( wan_check_response("CLASS=DBULK")) {
+                wan_process_rsp_data();
+                retS = true;
+                goto quit;
+            }
+        }
+    } 
+
+    retS = false;
+    
+    
+quit:
+    
+    xSemaphoreGive( sem_WAN );
+    xprintf_P(PSTR("WAN:: Memory Empty\r\n"));
+    //FAT_flush();
+    
+    return (retS);
+
+
 }
 //------------------------------------------------------------------------------

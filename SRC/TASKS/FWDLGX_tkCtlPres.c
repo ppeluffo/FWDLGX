@@ -58,8 +58,9 @@ uint32_t ulNotificationValue;
 		//vTaskDelay( ( TickType_t)( 55000 / portTICK_PERIOD_MS ) );
       
         // Espero hasta 45 secs un mensaje
-        ulNotificationValue = ulTaskNotifyTake(pdTRUE, ( TickType_t)( (1000 * 45 ) / portTICK_PERIOD_MS ));
+        ulNotificationValue = ulTaskNotifyTake(pdTRUE, ( TickType_t)( (uint32_t)(45 * 1000L ) / portTICK_PERIOD_MS ));
         
+        // SERVICIO DE VALVULA INTEGRADA
         if( ( ulNotificationValue & SIGNAL_OPEN_VALVE ) != 0 ) {
             xprintf_P(PSTR("tkCtlPres OPEN_VALVE msg rcvd.\r\n")); 
             VALVE_open();
@@ -70,6 +71,11 @@ uint32_t ulNotificationValue;
        
         } else {
             vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
+        }
+        
+        // SERVICIO DE CONSIGNAS
+        if ( consigna_conf.enabled ) {
+            pv_consigna_service();
         }
                
 	}

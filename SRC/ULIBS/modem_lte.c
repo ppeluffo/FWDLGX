@@ -703,7 +703,7 @@ bool modem_check_and_reconfig(bool verbose, bool save_dlg_config)
      */
     
 char *p;
-char param_str[48];
+//char param_str[48];
 bool modem_in_default = false;
 
     xprintf_P(PSTR("MODEM config check and set...\r\n"));
@@ -825,7 +825,7 @@ bool modem_in_default = false;
         return(false);          
     }
     
- quit:
+ //quit:
  
     return(true);
     

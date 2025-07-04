@@ -33,7 +33,7 @@ extern "C" {
     
 #define TDIAL_MIN_DISCRETO  900
     
-typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO, PWR_MIXTO } pwr_modo_t;
+typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO, PWR_MIXTO, PWR_RTU } pwr_modo_t;
 
 typedef struct {
     char dlgid[DLGID_LENGTH];

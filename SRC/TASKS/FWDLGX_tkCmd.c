@@ -118,7 +118,7 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  counter enable{true/false} cname magPP modo(PULSO/CAUDAL)\r\n") );
         xprintf_P( PSTR("  dlgid\r\n"));
         xprintf_P( PSTR("  timerpoll,timerdial\r\n"));
-        xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}\r\n"));
+        xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto, rtu}\r\n"));
         xprintf_P( PSTR("  pwron {hhmm}, pwroff {hhmm}\r\n"));
         xprintf_P( PSTR("  modem {apn|ip|port}\r\n"));
         

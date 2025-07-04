@@ -87,7 +87,7 @@ extern "C" {
  * Este define lo usamos para poner logs en la parte del modem que nos 
  * sirva para hacer mediciones.
  */
-#define TESTING_MODEM
+//#define TESTING_MODEM
 
 //uint32_t rtcounter;
 
@@ -126,8 +126,8 @@ extern "C" {
 #endif
       
 #define FW_TYPE "FWDLGX"
-#define FW_REV "1.0.3"
-#define FW_DATE "@ 20250616"
+#define FW_REV "1.1.0"
+#define FW_DATE "@ 20250624"
 #define FRTOS_VERSION "FW: FreeRTOS 202212.01"
 
 #define pdSECS_TO_TICKS(xTimeInSecs) ((TickType_t)(((uint32_t)(xTimeInSecs) * (uint32_t)configTICK_RATE_HZ) ))

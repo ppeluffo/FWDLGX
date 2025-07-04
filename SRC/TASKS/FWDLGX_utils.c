@@ -580,9 +580,11 @@ void u_print_tasks_running(void)
 //------------------------------------------------------------------------------
 void debug_print_regs(void)
 {
-uint32_t count, per;
     
 #ifdef HW_XMEGA
+    
+uint32_t count, per;
+
     xprintf_P(PSTR("CLK.RTCCTRL=0x%02x\r\n"), CLK.RTCCTRL);
     xprintf_P(PSTR("OSC.CTRL=0x%02x\r\n"), OSC.CTRL);
     xprintf_P(PSTR("CLK.CTRL=0x%02x\r\n"), CLK.CTRL);
